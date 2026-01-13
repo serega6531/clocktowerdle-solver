@@ -1,0 +1,191 @@
+import kotlin.collections.emptyList
+
+fun getBestStarting(allCharacters: List<Character>): List<Pair<Character, Double>> {
+    val minDistances: MutableMap<DistanceKey, Int> = mutableMapOf()
+
+    allCharacters.forEach { assumedTarget ->
+        getPossiblePaths(assumedTarget, allCharacters, allCharacters.toSet(), emptyList(), minDistances)
+    }
+
+    val avgDistancesByStarting = allCharacters.associateWith { starting ->
+        minDistances.filter { it.key.starting == starting }.values.average()
+    }
+    return avgDistancesByStarting.entries.sortedBy { it.value }.map { (k, v) -> k to v }
+}
+
+private fun getPossiblePaths(
+    assumedTarget: Character,
+    allCharacters: List<Character>,
+    possibleCharacters: Set<Character>,
+    existingGuesses: List<Guess>,
+    minDistances: MutableMap<DistanceKey, Int>
+) {
+    val charactersToTry = if (possibleCharacters.size > 2) {
+        // there might be a character that is already excluded but cuts the possibilities better
+        (allCharacters - existingGuesses.map { it.character }.toSet())
+            /*.filterTo(mutableSetOf()) { candidate ->
+                existingGuesses.all {
+                    matches(candidate, it)
+                }
+            }*/
+    } else {
+        possibleCharacters
+    }
+
+    val withoutDirect = if (charactersToTry.size > 1) {
+        charactersToTry - assumedTarget
+    } else {
+        charactersToTry
+    }
+
+    // TODO sort?
+
+    withoutDirect.forEach { guessCharacter ->
+        tryMatchCharacter(assumedTarget, guessCharacter, existingGuesses, possibleCharacters, allCharacters, minDistances)
+    }
+}
+
+private fun tryMatchCharacter(
+    assumedTarget: Character,
+    guessCharacter: Character,
+    existingGuesses: List<Guess>,
+    possibleCharacters: Set<Character>,
+    allCharacters: List<Character>,
+    minDistances: MutableMap<DistanceKey, Int>
+) {
+    val guess = makeGuess(assumedTarget, guessCharacter)
+    val newGuesses = existingGuesses + guess
+
+    val distanceKey = DistanceKey(newGuesses.first().character, assumedTarget)
+    if (minDistances[distanceKey]?.let { it == newGuesses.size } == true) {
+        return // already found a shorter or equal path
+    }
+
+    if (guess.correct) {
+        minDistances[distanceKey] = newGuesses.size
+        return
+    }
+
+    val remaining = (possibleCharacters - guessCharacter).filterTo(mutableSetOf()) { candidate ->
+        newGuesses.all {
+            matches(candidate, it)
+        }
+    }
+
+    if (remaining.size + 1 >= possibleCharacters.size) { // guess gave no additional information
+        return
+    }
+
+    getPossiblePaths(assumedTarget, allCharacters, remaining, newGuesses, minDistances)
+}
+
+private fun makeGuess(target: Character, guessCharacter: Character): Guess {
+    val correct = guessCharacter == target
+    val originalScriptAccuracy = isAccurateNoPartial(target, guessCharacter) { it.originalScript }
+    val characterTypeAccuracy = getCharacterTypeAccuracy(target, guessCharacter)
+    val wakesInNightAccuracy = isAccurateNoPartial(target, guessCharacter) { it.wakesInNight }
+    val selectsPlayerAccuracy = isAccurateNoPartial(target, guessCharacter) { it.selectsPlayer }
+    val learnsInfoAccuracy = isAccurateNoPartial(target, guessCharacter) { it.learnsInfo }
+    val abilityMatches = getAbilityMatches(target, guessCharacter)
+
+    return Guess(
+        character = guessCharacter,
+        correct = correct,
+        originalScriptAccuracy = originalScriptAccuracy,
+        characterTypeAccuracy = characterTypeAccuracy,
+        wakesInNightAccuracy = wakesInNightAccuracy,
+        selectsPlayerAccuracy = selectsPlayerAccuracy,
+        learnsInfoAccuracy = learnsInfoAccuracy,
+        abilityMatches = abilityMatches
+    )
+}
+
+private fun getCharacterTypeAccuracy(character: Character, guessCharacter: Character): Accuracy {
+    val left = character.characterType
+    val right = guessCharacter.characterType
+
+    return when {
+        left == right -> Accuracy.CORRECT
+        left.otherInTeam() == right -> Accuracy.PARTIALLY_CORRECT
+        else -> Accuracy.INCORRECT
+    }
+}
+
+private inline fun isAccurateNoPartial(
+    character: Character,
+    guessCharacter: Character,
+    extractor: (Character) -> Any
+): Accuracy {
+    val left = extractor(character)
+    val right = extractor(guessCharacter)
+
+    return if (left == right) Accuracy.CORRECT else Accuracy.INCORRECT
+}
+
+private fun getAbilityMatches(character: Character, guessCharacter: Character): Int {
+    return character.ability.intersect(guessCharacter.ability).size
+}
+
+private fun matches(character: Character, guess: Guess): Boolean {
+    val scriptMatches = attributeMatchesNoPartial(character, guess, guess.originalScriptAccuracy) { it.originalScript }
+    val characterTypeMatches = characterTypeMatches(character, guess)
+    val wakesInNightMatches =
+        attributeMatchesNoPartial(character, guess, guess.wakesInNightAccuracy) { it.wakesInNight }
+    val selectsPlayerMatches =
+        attributeMatchesNoPartial(character, guess, guess.selectsPlayerAccuracy) { it.selectsPlayer }
+    val learnsInfoMatches = attributeMatchesNoPartial(character, guess, guess.learnsInfoAccuracy) { it.learnsInfo }
+    val abilityMatches = abilityMatches(character, guess)
+
+    return scriptMatches && characterTypeMatches && wakesInNightMatches && selectsPlayerMatches && learnsInfoMatches && abilityMatches
+}
+
+private inline fun attributeMatchesNoPartial(
+    character: Character,
+    guess: Guess,
+    accuracy: Accuracy,
+    extractor: (Character) -> Any
+): Boolean {
+    val characterAttri = extractor(character)
+    val guessAttri = extractor(guess.character)
+
+    val same = characterAttri == guessAttri
+    val correct = accuracy == Accuracy.CORRECT
+
+    return (same && correct) || (!same && !correct)
+}
+
+private fun characterTypeMatches(character: Character, guess: Guess): Boolean {
+    val guessedType = guess.character.characterType
+
+    val possibleTypes = when (guess.characterTypeAccuracy) {
+        Accuracy.CORRECT -> listOf(guessedType)
+        Accuracy.PARTIALLY_CORRECT -> listOf(guessedType.otherInTeam())
+        Accuracy.INCORRECT -> guessedType.otherTeam()
+    }
+
+    return character.characterType in possibleTypes
+}
+
+private fun abilityMatches(character: Character, guess: Guess): Boolean {
+    val expectedMatches = character.ability.count { it in guess.character.ability }
+    return expectedMatches == guess.abilityMatches
+}
+
+data class Guess(
+    val character: Character,
+    val correct: Boolean,
+    val originalScriptAccuracy: Accuracy,
+    val characterTypeAccuracy: Accuracy,
+    val wakesInNightAccuracy: Accuracy,
+    val selectsPlayerAccuracy: Accuracy,
+    val learnsInfoAccuracy: Accuracy,
+    val abilityMatches: Int,
+)
+
+enum class Accuracy {
+    CORRECT,
+    PARTIALLY_CORRECT,
+    INCORRECT
+}
+
+private data class DistanceKey(val starting: Character, val target: Character)
