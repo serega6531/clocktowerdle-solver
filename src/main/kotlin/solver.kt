@@ -1,47 +1,69 @@
 import kotlin.collections.emptyList
 
 fun getBestStarting(allCharacters: List<Character>): List<Pair<Character, Double>> {
-    val minDistances: MutableMap<DistanceKey, Int> = mutableMapOf()
+    val minPaths: MutableMap<DistanceKey, List<Guess>> = mutableMapOf()
 
     allCharacters.forEach { assumedTarget ->
-        getPossiblePaths(assumedTarget, allCharacters, allCharacters.toSet(), emptyList(), minDistances)
+        calculateShortestPaths(assumedTarget, allCharacters, allCharacters.toSet(), emptyList(), minPaths)
     }
 
     val avgDistancesByStarting = allCharacters.associateWith { starting ->
-        minDistances.filter { it.key.starting == starting }.values.average()
+        minPaths.filter { it.key.starting == starting }.values.map { it.size }.average()
     }
     return avgDistancesByStarting.entries.sortedBy { it.value }.map { (k, v) -> k to v }
 }
 
-private fun getPossiblePaths(
-    assumedTarget: Character,
+fun getBestChoice(allCharacters: List<Character>, existingGuesses: List<Guess>): Character {
+    val possibleCharacters =
+        (allCharacters - existingGuesses.map { it.character }.toSet()).filterTo(mutableSetOf()) { candidate ->
+            existingGuesses.all { matches(candidate, it) }
+        }
+
+    val minPaths: MutableMap<DistanceKey, List<Guess>> = mutableMapOf()
+    possibleCharacters.forEach { target ->
+        calculateShortestPaths(
+            target,
+            allCharacters,
+            possibleCharacters,
+            existingGuesses,
+            minPaths
+        )
+    }
+
+    val nextChoices = minPaths.values.map { it[existingGuesses.size].character }
+    val frequencies = nextChoices.groupingBy { it }.eachCount()
+    return frequencies.entries.maxBy { it.value }.key
+}
+
+private fun calculateShortestPaths(
+    target: Character,
     allCharacters: List<Character>,
     possibleCharacters: Set<Character>,
     existingGuesses: List<Guess>,
-    minDistances: MutableMap<DistanceKey, Int>
+    result: MutableMap<DistanceKey, List<Guess>>
 ) {
     val charactersToTry = if (possibleCharacters.size > 2) {
         // there might be a character that is already excluded but cuts the possibilities better
         (allCharacters - existingGuesses.map { it.character }.toSet())
-            /*.filterTo(mutableSetOf()) { candidate ->
-                existingGuesses.all {
-                    matches(candidate, it)
-                }
-            }*/
     } else {
         possibleCharacters
     }
 
     val withoutDirect = if (charactersToTry.size > 1) {
-        charactersToTry - assumedTarget
+        charactersToTry - target
     } else {
         charactersToTry
     }
 
-    // TODO sort?
-
     withoutDirect.forEach { guessCharacter ->
-        tryMatchCharacter(assumedTarget, guessCharacter, existingGuesses, possibleCharacters, allCharacters, minDistances)
+        tryMatchCharacter(
+            target,
+            guessCharacter,
+            existingGuesses,
+            possibleCharacters,
+            allCharacters,
+            result
+        )
     }
 }
 
@@ -51,18 +73,18 @@ private fun tryMatchCharacter(
     existingGuesses: List<Guess>,
     possibleCharacters: Set<Character>,
     allCharacters: List<Character>,
-    minDistances: MutableMap<DistanceKey, Int>
+    minDistances: MutableMap<DistanceKey, List<Guess>>
 ) {
     val guess = makeGuess(assumedTarget, guessCharacter)
     val newGuesses = existingGuesses + guess
 
     val distanceKey = DistanceKey(newGuesses.first().character, assumedTarget)
-    if (minDistances[distanceKey]?.let { it == newGuesses.size } == true) {
+    if (minDistances[distanceKey]?.let { it.size == newGuesses.size } == true) {
         return // already found a shorter or equal path
     }
 
     if (guess.correct) {
-        minDistances[distanceKey] = newGuesses.size
+        minDistances[distanceKey] = newGuesses
         return
     }
 
@@ -76,7 +98,7 @@ private fun tryMatchCharacter(
         return
     }
 
-    getPossiblePaths(assumedTarget, allCharacters, remaining, newGuesses, minDistances)
+    calculateShortestPaths(assumedTarget, allCharacters, remaining, newGuesses, minDistances)
 }
 
 private fun makeGuess(target: Character, guessCharacter: Character): Guess {
@@ -180,7 +202,21 @@ data class Guess(
     val selectsPlayerAccuracy: Accuracy,
     val learnsInfoAccuracy: Accuracy,
     val abilityMatches: Int,
-)
+) {
+    companion object {
+        fun correct(character: Character) =
+            Guess(
+                character,
+                true,
+                Accuracy.CORRECT,
+                Accuracy.CORRECT,
+                Accuracy.CORRECT,
+                Accuracy.CORRECT,
+                Accuracy.CORRECT,
+                character.ability.size
+            )
+    }
+}
 
 enum class Accuracy {
     CORRECT,
