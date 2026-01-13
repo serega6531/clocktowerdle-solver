@@ -6,6 +6,7 @@ fun main() {
         println("Choose an option:")
         println("1 - Print best starting characters")
         println("2 - Interactive solver")
+        println("0 - Exit")
         print("Enter your choice: ")
 
         val userInput = readln()
@@ -20,6 +21,8 @@ fun main() {
             "2" -> {
                 runInteractiveSolver(characters)
             }
+
+            "0" -> return
 
             else -> {
                 println("Invalid option")
