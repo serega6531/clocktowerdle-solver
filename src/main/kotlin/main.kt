@@ -1,7 +1,4 @@
 fun main() {
-    println("Loading characters...")
-    val characters = loadCharacters()
-
     while (true) {
         println("Choose an option:")
         println("1 - Print best starting characters")
@@ -14,12 +11,12 @@ fun main() {
         when (userInput) {
             "1" -> {
                 println("Calculating best starting characters...")
-                val bestStarting = getBestStarting(characters)
-                bestStarting.forEach { println("${it.first.name} -> ${it.second}") }
+                val bestStarting = getBestStarting()
+                bestStarting.forEach { println("${it.first.characterName} -> ${it.second}") }
             }
 
             "2" -> {
-                runInteractiveSolver(characters)
+                runInteractiveSolver()
             }
 
             "0" -> return
@@ -31,9 +28,9 @@ fun main() {
     }
 }
 
-private fun runInteractiveSolver(characters: List<Character>) {
+private fun runInteractiveSolver() {
     val guesses = mutableListOf<Guess>()
-    var character = getCharacterGuessInput(characters)
+    var character = getCharacterGuessInput()
 
     while (true) {
         val feedback = getFeedbackInput(character)
@@ -44,16 +41,16 @@ private fun runInteractiveSolver(characters: List<Character>) {
         }
 
         guesses.add(feedback)
-        character = getBestChoice(characters, guesses)
-        println("Next guess: ${character.name}")
+        character = getBestChoice(guesses)
+        println("Next guess: ${character.characterName}")
     }
 }
 
-private fun getCharacterGuessInput(characters: List<Character>): Character {
+private fun getCharacterGuessInput(): Character {
     while (true) {
         print("Enter your guess: ")
         val input = readln()
-        val character = characters.find { it.name.equals(input, ignoreCase = true) }
+        val character = Character.entries.find { it.name == input || it.characterName.equals(input, ignoreCase = true) }
 
         if (character == null) {
             println("Character not found, try again")
