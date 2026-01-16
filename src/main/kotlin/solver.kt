@@ -7,7 +7,6 @@ fun getBestStarting(): List<Pair<Character, Double>> {
         calculateShortestPaths(assumedTarget, Character.entries.toSet(), emptyList(), minPaths)
     }
 
-    val avgDistancesByStarting = allCharacters.associateWith { starting ->
     val avgDistancesByStarting = Character.entries.associateWith { starting ->
         minPaths.filter { it.key.starting == starting }.values.map { it.first().size }.average()
     }
@@ -35,7 +34,7 @@ fun getBestChoice(existingGuesses: Path): Character {
     return frequencies.entries.maxBy { it.value }.key
 }
 
-private fun calculateShortestPaths(
+internal fun calculateShortestPaths(
     target: Character,
     possibleCharacters: Set<Character>,
     existingGuesses: Path,
@@ -98,14 +97,10 @@ private fun tryMatchCharacter(
         }
     }
 
-    if (remaining.size + 1 >= possibleCharacters.size) { // guess gave no additional information
-        return
-    }
-
     calculateShortestPaths(assumedTarget, remaining, newGuesses, minDistances)
 }
 
-private fun makeGuess(target: Character, guessCharacter: Character): Guess {
+internal fun makeGuess(target: Character, guessCharacter: Character): Guess {
     val correct = guessCharacter == target
     val originalScriptAccuracy = isAccurateNoPartial(target, guessCharacter) { it.originalScript }
     val characterTypeAccuracy = getCharacterTypeAccuracy(target, guessCharacter)
@@ -126,7 +121,7 @@ private fun makeGuess(target: Character, guessCharacter: Character): Guess {
     )
 }
 
-private fun getCharacterTypeAccuracy(character: Character, guessCharacter: Character): Accuracy {
+internal fun getCharacterTypeAccuracy(character: Character, guessCharacter: Character): Accuracy {
     val left = character.characterType
     val right = guessCharacter.characterType
 
@@ -152,7 +147,7 @@ private fun getAbilityMatches(character: Character, guessCharacter: Character): 
     return character.ability.intersect(guessCharacter.ability).size
 }
 
-private fun matches(character: Character, guess: Guess): Boolean {
+internal fun matches(character: Character, guess: Guess): Boolean {
     val scriptMatches = attributeMatchesNoPartial(character, guess, guess.originalScriptAccuracy) { it.originalScript }
     val characterTypeMatches = characterTypeMatches(character, guess)
     val wakesInNightMatches =
@@ -192,7 +187,7 @@ private fun characterTypeMatches(character: Character, guess: Guess): Boolean {
     return character.characterType in possibleTypes
 }
 
-private fun abilityMatches(character: Character, guess: Guess): Boolean {
+internal fun abilityMatches(character: Character, guess: Guess): Boolean {
     val expectedMatches = character.ability.count { it in guess.character.ability }
     return expectedMatches == guess.abilityMatches
 }
@@ -228,7 +223,7 @@ enum class Accuracy {
     INCORRECT
 }
 
-private data class DistanceKey(val starting: Character, val target: Character) {
+internal data class DistanceKey(val starting: Character, val target: Character) {
     override fun toString(): String {
         return "${starting.characterName} -> ${target.characterName}"
     }
