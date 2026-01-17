@@ -1,5 +1,3 @@
-import kotlin.collections.emptyList
-
 fun getBestStarting(): List<Pair<Character, Double>> {
     val minPaths: MutableMap<DistanceKey, List<Path>> = mutableMapOf()
 
@@ -92,9 +90,7 @@ private fun tryMatchCharacter(
     }
 
     val remaining = (possibleCharacters - guessCharacter).filterTo(mutableSetOf()) { candidate ->
-        newGuesses.all {
-            matches(candidate, it)
-        }
+        matches(candidate, guess)
     }
 
     calculateShortestPaths(assumedTarget, remaining, newGuesses, minDistances)
