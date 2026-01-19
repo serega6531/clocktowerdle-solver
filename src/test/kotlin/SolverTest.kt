@@ -116,7 +116,7 @@ class SolverTest {
             // But a character with a different overlap count should NOT match
             val differentCandidate = Character.SOLDIER
             // First check if SOLDIER actually has a different overlap with EMPATH
-            val soldierOverlap = differentCandidate.ability.intersect(guessChar.ability).size
+            val soldierOverlap = differentCandidate.ability.count { it in guessChar.ability }
             assertNotEquals(guess.abilityMatches, soldierOverlap)
             assertFalse(matches(differentCandidate, guess))
         }

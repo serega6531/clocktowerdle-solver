@@ -146,7 +146,7 @@ private inline fun isAccurateNoPartial(
 }
 
 private fun getAbilityMatches(character: Character, guessCharacter: Character): Int {
-    return character.ability.intersect(guessCharacter.ability).size
+    return character.ability.count { it in guessCharacter.ability }
 }
 
 internal fun matches(character: Character, guess: Guess): Boolean {
