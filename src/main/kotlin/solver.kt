@@ -38,62 +38,66 @@ internal fun calculateShortestPaths(
     existingGuesses: Path,
     result: MutableMap<DistanceKey, List<Path>>
 ) {
-    val charactersToTry = if (possibleCharacters.size > 2) {
-        // there might be a character that is already excluded but cuts the possibilities better
-        (Character.entries - existingGuesses.map { it.character }.toSet())
-    } else {
-        possibleCharacters
+    val charactersToTry = when (possibleCharacters.size) {
+        1 -> {
+            check(possibleCharacters.single() == target) { "Expected target to be the only possible character" }
+            updateShortestPath(target, existingGuesses, result)
+            return
+        }
+        2 -> {
+            // if only two are left, it's not useful to try characters that are not in the list
+            possibleCharacters
+        }
+        else -> {
+            // there might be a character that is already excluded but cuts the possibilities better
+            (Character.entries - existingGuesses.map { it.character }.toSet())
+        }
     }
 
-    val withoutDirect = if (charactersToTry.size > 1) {
-        charactersToTry - target
-    } else {
-        charactersToTry
+    val withoutDirect = charactersToTry - target
+
+    val withRemaining = withoutDirect.associateWith { guessCharacter ->
+        val guess = makeGuess(target, guessCharacter)
+        (possibleCharacters - guessCharacter).filterTo(mutableSetOf()) { candidate ->
+            matches(candidate, guess)
+        }
     }
 
-    withoutDirect.forEach { guessCharacter ->
-        tryMatchCharacter(
-            target,
-            guessCharacter,
-            existingGuesses,
-            possibleCharacters,
-            result
-        )
-    }
+    withRemaining.filterValues { it.isNotEmpty() }
+        .entries
+        .sortedBy { (_, remaining) -> remaining.size }
+        .forEach { (guessCharacter, remaining) ->
+            val first = existingGuesses.firstOrNull()?.character ?: guessCharacter
+            val distanceKey = DistanceKey(first, target)
+            val previousPaths = result[distanceKey]
+
+            if (previousPaths?.let { it.first().size == existingGuesses.size + 1 } == true) {
+                return@forEach // the path can only be longer than the one found so far
+            }
+
+            val guess = makeGuess(target, guessCharacter)
+            val newGuesses = existingGuesses + guess
+
+            calculateShortestPaths(target, remaining, newGuesses, result)
+        }
 }
 
-private fun tryMatchCharacter(
-    assumedTarget: Character,
-    guessCharacter: Character,
+private fun updateShortestPath(
+    target: Character,
     existingGuesses: Path,
-    possibleCharacters: Set<Character>,
-    minDistances: MutableMap<DistanceKey, List<Path>>
+    result: MutableMap<DistanceKey, List<Path>>
 ) {
-    val guess = makeGuess(assumedTarget, guessCharacter)
+    val distanceKey = DistanceKey(existingGuesses.first().character, target)
+    val previousPaths = result[distanceKey]
+
+    val guess = Guess.correct(target)
     val newGuesses = existingGuesses + guess
 
-    val distanceKey = DistanceKey(newGuesses.first().character, assumedTarget)
-    val previousPaths = minDistances[distanceKey]
-
-    if (guess.correct) {
-        if (previousPaths == null || newGuesses.size < previousPaths.first().size) {
-            minDistances[distanceKey] = listOf(newGuesses)
-        } else if (newGuesses.size == previousPaths.first().size) {
-            minDistances[distanceKey] = previousPaths + listOf(newGuesses)
-        }
-
-        return
+    if (previousPaths == null || newGuesses.size < previousPaths.first().size) {
+        result[distanceKey] = listOf(newGuesses)
+    } else if (newGuesses.size == previousPaths.first().size) {
+        result[distanceKey] = previousPaths + listOf(newGuesses)
     }
-
-    if (previousPaths?.let { it.first().size == newGuesses.size } == true) {
-        return // the path can only be longer than the one found so far
-    }
-
-    val remaining = (possibleCharacters - guessCharacter).filterTo(mutableSetOf()) { candidate ->
-        matches(candidate, guess)
-    }
-
-    calculateShortestPaths(assumedTarget, remaining, newGuesses, minDistances)
 }
 
 internal fun makeGuess(target: Character, guessCharacter: Character): Guess {
