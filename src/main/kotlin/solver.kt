@@ -63,18 +63,20 @@ internal fun calculateShortestPaths(
         }
     }
 
-    withRemaining.filterValues { it.isNotEmpty() }
-        .entries
+    withRemaining
+        .asSequence()
+        .filter { (_, remaining) -> remaining.isNotEmpty() }
         .sortedBy { (_, remaining) -> remaining.size }
-        .forEach { (guessCharacter, remaining) ->
+        .filter { (guessCharacter, _) ->
             val first = existingGuesses.firstOrNull()?.character ?: guessCharacter
             val distanceKey = DistanceKey(first, target)
             val previousPaths = result[distanceKey]
 
-            if (previousPaths?.let { it.first().size == existingGuesses.size + 1 } == true) {
-                return@forEach // the path can only be longer than the one found so far
-            }
-
+            // If we've already found a path of length (existingGuesses.size + 1), there's no point
+            // exploring this branch further as it won't produce a shorter path.
+            previousPaths == null || previousPaths.first().size != existingGuesses.size + 1
+        }
+        .forEach { (guessCharacter, remaining) ->
             val guess = makeGuess(target, guessCharacter)
             val newGuesses = existingGuesses + guess
 
