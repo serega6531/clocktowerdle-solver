@@ -42,7 +42,11 @@ fun getBestChoice(existingGuesses: Path): Character {
 
     val nextChoices = minPaths.values.flatten().map { it[existingGuesses.size].character }
     val frequencies = nextChoices.groupingBy { it }.eachCount()
-    return frequencies.entries.maxBy { it.value }.key
+    val maxFreq = frequencies.values.max()
+    val bestChoices = frequencies.filterValues { it == maxFreq }.keys
+    val priorityChoices = bestChoices.filter { it in possibleCharacters }
+
+    return priorityChoices.randomOrNull() ?: bestChoices.random()
 }
 
 internal fun calculateShortestPaths(
