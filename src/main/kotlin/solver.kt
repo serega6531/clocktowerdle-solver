@@ -1,14 +1,27 @@
-fun getBestStarting(): List<Pair<Character, Double>> {
-    val minPaths: MutableMap<DistanceKey, List<Path>> = mutableMapOf()
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.measureTimedValue
 
-    Character.entries.forEach { assumedTarget ->
-        calculateShortestPaths(assumedTarget, Character.entries.toSet(), emptyList(), minPaths)
-    }
+suspend fun getBestStarting(): List<Pair<Character, Double>> = coroutineScope {
+    val minPathsMap = Character.entries.map { assumedTarget ->
+        async(Dispatchers.Default) {
+            val (minPaths, duration) = measureTimedValue {
+                calculateShortestPaths(assumedTarget, Character.entries.toSet(), emptyList())
+            }
+            println("Calculated shortest paths to ${assumedTarget.name} in $duration: ${minPaths.values.sumOf { it.size }} paths")
+            minPaths
+        }
+    }.awaitAll()
+
+    val minPaths = minPathsMap.flatMap { it.entries }.associate { it.key to it.value }
 
     val avgDistancesByStarting = Character.entries.associateWith { starting ->
         minPaths.filter { it.key.starting == starting }.values.map { it.first().size }.average()
     }
-    return avgDistancesByStarting.entries.sortedBy { it.value }.map { (k, v) -> k to v }
+    avgDistancesByStarting.entries.sortedBy { it.value }.map { (k, v) -> k to v }
 }
 
 fun getBestChoice(existingGuesses: Path): Character {
@@ -36,13 +49,13 @@ internal fun calculateShortestPaths(
     target: Character,
     possibleCharacters: Set<Character>,
     existingGuesses: Path,
-    result: MutableMap<DistanceKey, List<Path>>
-) {
+    result: MutableMap<DistanceKey, List<Path>> = mutableMapOf()
+): Map<DistanceKey, List<Path>> {
     val charactersToTry = when (possibleCharacters.size) {
         1 -> {
             check(possibleCharacters.single() == target) { "Expected target to be the only possible character" }
             updateShortestPath(target, existingGuesses, result)
-            return
+            return result
         }
 
         2 -> {
@@ -84,6 +97,8 @@ internal fun calculateShortestPaths(
 
             calculateShortestPaths(target, remaining, newGuesses, result)
         }
+
+    return result
 }
 
 private fun updateShortestPath(
@@ -104,7 +119,7 @@ private fun updateShortestPath(
     }
 }
 
-private val guessCache = mutableMapOf<Pair<Character, Character>, Guess>()
+private val guessCache = ConcurrentHashMap<Pair<Character, Character>, Guess>()
 
 internal fun makeGuess(target: Character, guessCharacter: Character): Guess {
     return guessCache.getOrPut(target to guessCharacter) {
@@ -155,7 +170,7 @@ private fun getAbilityMatches(character: Character, guessCharacter: Character): 
     return character.ability.count { it in guessCharacter.ability }
 }
 
-private val matchesCache = mutableMapOf<Pair<Character, Guess>, Boolean>()
+private val matchesCache = ConcurrentHashMap<Pair<Character, Guess>, Boolean>()
 
 internal fun matches(character: Character, guess: Guess): Boolean {
     return matchesCache.getOrPut(character to guess) {

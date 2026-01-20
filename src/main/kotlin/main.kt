@@ -1,4 +1,4 @@
-fun main() {
+suspend fun main() {
     while (true) {
         println("Choose an option:")
         println("1 - Print best starting characters")

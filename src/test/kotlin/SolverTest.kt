@@ -1,12 +1,14 @@
-import org.junit.jupiter.api.Test
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import java.util.stream.Stream
+import kotlin.time.Duration.Companion.hours
 
 class SolverTest {
 
@@ -215,7 +217,7 @@ class SolverTest {
     inner class GetBestStartingTests {
 
         @Test
-        fun `getBestStarting returns all characters sorted by average distance`() {
+        fun `getBestStarting returns all characters sorted by average distance`() = runTest(timeout = 1.hours) {
             val result = getBestStarting()
 
             assertEquals(Character.entries.size, result.size)
