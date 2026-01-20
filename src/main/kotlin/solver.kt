@@ -159,17 +159,12 @@ private val matchesCache = mutableMapOf<Pair<Character, Guess>, Boolean>()
 
 internal fun matches(character: Character, guess: Guess): Boolean {
     return matchesCache.getOrPut(character to guess) {
-        val scriptMatches =
-            attributeMatchesNoPartial(character, guess, guess.originalScriptAccuracy) { it.originalScript }
-        val characterTypeMatches = characterTypeMatches(character, guess)
-        val wakesInNightMatches =
-            attributeMatchesNoPartial(character, guess, guess.wakesInNightAccuracy) { it.wakesInNight }
-        val selectsPlayerMatches =
-            attributeMatchesNoPartial(character, guess, guess.selectsPlayerAccuracy) { it.selectsPlayer }
-        val learnsInfoMatches = attributeMatchesNoPartial(character, guess, guess.learnsInfoAccuracy) { it.learnsInfo }
-        val abilityMatches = abilityMatches(character, guess)
-
-        scriptMatches && characterTypeMatches && wakesInNightMatches && selectsPlayerMatches && learnsInfoMatches && abilityMatches
+        attributeMatchesNoPartial(character, guess, guess.originalScriptAccuracy) { it.originalScript } &&
+                characterTypeMatches(character, guess) &&
+                attributeMatchesNoPartial(character, guess, guess.wakesInNightAccuracy) { it.wakesInNight } &&
+                attributeMatchesNoPartial(character, guess, guess.selectsPlayerAccuracy) { it.selectsPlayer } &&
+                attributeMatchesNoPartial(character, guess, guess.learnsInfoAccuracy) { it.learnsInfo } &&
+                abilityMatches(character, guess)
     }
 }
 
