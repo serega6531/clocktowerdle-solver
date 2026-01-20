@@ -44,10 +44,12 @@ internal fun calculateShortestPaths(
             updateShortestPath(target, existingGuesses, result)
             return
         }
+
         2 -> {
             // if only two are left, it's not useful to try characters that are not in the list
             possibleCharacters
         }
+
         else -> {
             // there might be a character that is already excluded but cuts the possibilities better
             (Character.entries - existingGuesses.map { it.character }.toSet())
@@ -58,8 +60,8 @@ internal fun calculateShortestPaths(
 
     val withRemaining = withoutDirect.associateWith { guessCharacter ->
         val guess = makeGuess(target, guessCharacter)
-        (possibleCharacters - guessCharacter).filterTo(mutableSetOf()) { candidate ->
-            matches(candidate, guess)
+        possibleCharacters.filterTo(mutableSetOf()) { candidate ->
+            candidate != guessCharacter && matches(candidate, guess)
         }
     }
 
@@ -102,25 +104,29 @@ private fun updateShortestPath(
     }
 }
 
-internal fun makeGuess(target: Character, guessCharacter: Character): Guess {
-    val correct = guessCharacter == target
-    val originalScriptAccuracy = isAccurateNoPartial(target, guessCharacter) { it.originalScript }
-    val characterTypeAccuracy = getCharacterTypeAccuracy(target, guessCharacter)
-    val wakesInNightAccuracy = isAccurateNoPartial(target, guessCharacter) { it.wakesInNight }
-    val selectsPlayerAccuracy = isAccurateNoPartial(target, guessCharacter) { it.selectsPlayer }
-    val learnsInfoAccuracy = isAccurateNoPartial(target, guessCharacter) { it.learnsInfo }
-    val abilityMatches = getAbilityMatches(target, guessCharacter)
+private val guessCache = mutableMapOf<Pair<Character, Character>, Guess>()
 
-    return Guess(
-        character = guessCharacter,
-        correct = correct,
-        originalScriptAccuracy = originalScriptAccuracy,
-        characterTypeAccuracy = characterTypeAccuracy,
-        wakesInNightAccuracy = wakesInNightAccuracy,
-        selectsPlayerAccuracy = selectsPlayerAccuracy,
-        learnsInfoAccuracy = learnsInfoAccuracy,
-        abilityMatches = abilityMatches
-    )
+internal fun makeGuess(target: Character, guessCharacter: Character): Guess {
+    return guessCache.getOrPut(target to guessCharacter) {
+        val correct = guessCharacter == target
+        val originalScriptAccuracy = isAccurateNoPartial(target, guessCharacter) { it.originalScript }
+        val characterTypeAccuracy = getCharacterTypeAccuracy(target, guessCharacter)
+        val wakesInNightAccuracy = isAccurateNoPartial(target, guessCharacter) { it.wakesInNight }
+        val selectsPlayerAccuracy = isAccurateNoPartial(target, guessCharacter) { it.selectsPlayer }
+        val learnsInfoAccuracy = isAccurateNoPartial(target, guessCharacter) { it.learnsInfo }
+        val abilityMatches = getAbilityMatches(target, guessCharacter)
+
+        Guess(
+            character = guessCharacter,
+            correct = correct,
+            originalScriptAccuracy = originalScriptAccuracy,
+            characterTypeAccuracy = characterTypeAccuracy,
+            wakesInNightAccuracy = wakesInNightAccuracy,
+            selectsPlayerAccuracy = selectsPlayerAccuracy,
+            learnsInfoAccuracy = learnsInfoAccuracy,
+            abilityMatches = abilityMatches
+        )
+    }
 }
 
 internal fun getCharacterTypeAccuracy(character: Character, guessCharacter: Character): Accuracy {
@@ -149,17 +155,22 @@ private fun getAbilityMatches(character: Character, guessCharacter: Character): 
     return character.ability.count { it in guessCharacter.ability }
 }
 
-internal fun matches(character: Character, guess: Guess): Boolean {
-    val scriptMatches = attributeMatchesNoPartial(character, guess, guess.originalScriptAccuracy) { it.originalScript }
-    val characterTypeMatches = characterTypeMatches(character, guess)
-    val wakesInNightMatches =
-        attributeMatchesNoPartial(character, guess, guess.wakesInNightAccuracy) { it.wakesInNight }
-    val selectsPlayerMatches =
-        attributeMatchesNoPartial(character, guess, guess.selectsPlayerAccuracy) { it.selectsPlayer }
-    val learnsInfoMatches = attributeMatchesNoPartial(character, guess, guess.learnsInfoAccuracy) { it.learnsInfo }
-    val abilityMatches = abilityMatches(character, guess)
+private val matchesCache = mutableMapOf<Pair<Character, Guess>, Boolean>()
 
-    return scriptMatches && characterTypeMatches && wakesInNightMatches && selectsPlayerMatches && learnsInfoMatches && abilityMatches
+internal fun matches(character: Character, guess: Guess): Boolean {
+    return matchesCache.getOrPut(character to guess) {
+        val scriptMatches =
+            attributeMatchesNoPartial(character, guess, guess.originalScriptAccuracy) { it.originalScript }
+        val characterTypeMatches = characterTypeMatches(character, guess)
+        val wakesInNightMatches =
+            attributeMatchesNoPartial(character, guess, guess.wakesInNightAccuracy) { it.wakesInNight }
+        val selectsPlayerMatches =
+            attributeMatchesNoPartial(character, guess, guess.selectsPlayerAccuracy) { it.selectsPlayer }
+        val learnsInfoMatches = attributeMatchesNoPartial(character, guess, guess.learnsInfoAccuracy) { it.learnsInfo }
+        val abilityMatches = abilityMatches(character, guess)
+
+        scriptMatches && characterTypeMatches && wakesInNightMatches && selectsPlayerMatches && learnsInfoMatches && abilityMatches
+    }
 }
 
 private inline fun attributeMatchesNoPartial(
