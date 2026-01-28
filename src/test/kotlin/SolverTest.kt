@@ -244,7 +244,7 @@ class SolverTest {
             val maxAttempts = 5
 
             while (!found && attempts < maxAttempts) {
-                val nextGuess = getBestChoice(guesses)
+                val nextGuess = assertNotNull(getBestChoice(guesses))
                 val guess = makeGuess(target, nextGuess)
                 guesses.add(guess)
                 found = guess.correct
@@ -253,35 +253,6 @@ class SolverTest {
 
             assertTrue(found, "Should find the target character")
             assertTrue(attempts <= Character.entries.size, "Should find in reasonable number of attempts")
-        }
-    }
-
-    @Nested
-    inner class ShortestPathTests {
-        @Test
-        fun `findShortestPaths works correctly`() {
-            val target = Character.INVESTIGATOR
-            val possibleCharacters = Character.entries.toSet()
-            val existingGuesses = emptyList<Guess>()
-            val minPaths = mutableMapOf<DistanceKey, List<List<Guess>>>()
-
-            calculateShortestPaths(target, possibleCharacters, existingGuesses, minPaths)
-
-            // From each character to INVESTIGATOR, except from themselves
-            val expectedPathCount = Character.entries.size - 1
-
-            assertEquals(expectedPathCount, minPaths.size, "Should find all possible paths")
-
-            minPaths.forEach { (key, paths) ->
-                assertTrue(paths.isNotEmpty(), "Should have at least one path for $key")
-
-                paths.forEach { path ->
-                    assertTrue(path.size >= 2)
-                    assertEquals(paths.first().size, path.size)
-                    assertEquals(key.starting, path.first().character)
-                    assertEquals(key.target, path.last().character)
-                }
-            }
         }
     }
 

@@ -1,4 +1,4 @@
-suspend fun main() {
+fun main() {
     while (true) {
         println("Choose an option:")
         println("1 - Print best starting characters")
@@ -41,7 +41,7 @@ private fun runInteractiveSolver() {
         }
 
         guesses.add(feedback)
-        character = getBestChoice(guesses)
+        character = getBestChoice(guesses) ?: run { println("Incorrect state"); return }
         println("Next guess: ${character.characterName}")
     }
 }

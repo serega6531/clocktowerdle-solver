@@ -1,126 +1,125 @@
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.measureTimedValue
 
-suspend fun getBestStarting(): List<Pair<Character, Double>> = coroutineScope {
-    val minPathsMap = Character.entries.map { assumedTarget ->
-        async(Dispatchers.Default) {
-            val (minPaths, duration) = measureTimedValue {
-                calculateShortestPaths(assumedTarget, Character.entries.toSet(), emptyList())
-            }
-            println("Calculated shortest paths to ${assumedTarget.name} in $duration: ${minPaths.values.sumOf { it.size }} paths")
-            minPaths
+private const val MAX_GUESSES = 4
+
+fun getBestStarting(): List<Pair<Character, Double>> {
+    val possibleTargets = Character.entries.toSet()
+    val guessPool = possibleTargets
+
+    val expectedByGuess = Character.entries
+        .map { guess ->
+            guess to expectedCostForGuess(guess, possibleTargets, emptySet(), guessPool)
         }
-    }.awaitAll()
 
-    val minPaths = minPathsMap.flatMap { it.entries }.associate { it.key to it.value }
-
-    val avgDistancesByStarting = Character.entries.associateWith { starting ->
-        minPaths.filter { it.key.starting == starting }.values.map { it.first().size }.average()
-    }
-    avgDistancesByStarting.entries.sortedBy { it.value }.map { (k, v) -> k to v }
+    return expectedByGuess.sortedBy { it.second }
 }
 
-fun getBestChoice(existingGuesses: Path): Character {
-    val possibleCharacters =
-        (Character.entries - existingGuesses.map { it.character }.toSet()).filterTo(mutableSetOf()) { candidate ->
+fun getBestChoice(existingGuesses: Path): Character? {
+    val bestChoices = getBestChoices(existingGuesses)
+    return bestChoices.randomOrNull()
+}
+
+fun getBestChoices(existingGuesses: Path): List<Character> {
+    val guessed = existingGuesses.map { it.character }.toSet()
+    val possibleTargets =
+        (Character.entries - guessed).filterTo(mutableSetOf()) { candidate ->
             existingGuesses.all { matches(candidate, it) }
         }
 
-    val minPaths: MutableMap<DistanceKey, List<Path>> = mutableMapOf()
-    possibleCharacters.forEach { target ->
-        calculateShortestPaths(
-            target,
-            possibleCharacters,
-            existingGuesses,
-            minPaths
-        )
-    }
-
-    val nextChoices = minPaths.values.flatten().map { it[existingGuesses.size].character }
-    val frequencies = nextChoices.groupingBy { it }.eachCount()
-    val maxFreq = frequencies.values.max()
-    val bestChoices = frequencies.filterValues { it == maxFreq }.keys
-    val priorityChoices = bestChoices.filter { it in possibleCharacters }
-
-    return priorityChoices.randomOrNull() ?: bestChoices.random()
+    val guessPool = Character.entries.toSet() - guessed
+    return getBestChoicesForTargets(possibleTargets, guessed, guessPool)
 }
 
-internal fun calculateShortestPaths(
-    target: Character,
-    possibleCharacters: Set<Character>,
-    existingGuesses: Path,
-    result: MutableMap<DistanceKey, List<Path>> = mutableMapOf()
-): Map<DistanceKey, List<Path>> {
-    val charactersToTry = when (possibleCharacters.size) {
-        1 -> {
-            check(possibleCharacters.single() == target) { "Expected target to be the only possible character" }
-            updateShortestPath(target, existingGuesses, result)
-            return result
-        }
-
-        2 -> {
-            // if only two are left, it's not useful to try characters that are not in the list
-            possibleCharacters
-        }
-
-        else -> {
-            // there might be a character that is already excluded but cuts the possibilities better
-            (Character.entries - existingGuesses.map { it.character }.toSet())
-        }
+internal fun getBestChoicesForTargets(
+    possibleTargets: Set<Character>,
+    guessed: Set<Character>,
+    guessPool: Set<Character> = Character.entries.toSet()
+): List<Character> {
+    if (possibleTargets.isEmpty()) {
+        return emptyList()
     }
 
-    val withoutDirect = charactersToTry - target
-
-    val withRemaining = withoutDirect.associateWith { guessCharacter ->
-        val guess = makeGuess(target, guessCharacter)
-        possibleCharacters.filterTo(mutableSetOf()) { candidate ->
-            candidate != guessCharacter && matches(candidate, guess)
-        }
+    if (guessed.size >= MAX_GUESSES) {
+        return emptyList()
     }
 
-    withRemaining
-        .asSequence()
-        .filter { (_, remaining) -> remaining.isNotEmpty() }
-        .sortedBy { (_, remaining) -> remaining.size }
-        .filter { (guessCharacter, _) ->
-            val first = existingGuesses.firstOrNull()?.character ?: guessCharacter
-            val distanceKey = DistanceKey(first, target)
-            val previousPaths = result[distanceKey]
+    val availableGuesses = guessPool - guessed
+    if (availableGuesses.isEmpty()) {
+        return emptyList()
+    }
 
-            // If we've already found a path of length (existingGuesses.size + 1), there's no point
-            // exploring this branch further as it won't produce a shorter path.
-            previousPaths == null || previousPaths.first().size != existingGuesses.size + 1
-        }
-        .forEach { (guessCharacter, remaining) ->
-            val guess = makeGuess(target, guessCharacter)
-            val newGuesses = existingGuesses + guess
+    val memo = mutableMapOf<ExpectedKey, Double>()
+    val expectedByGuess = availableGuesses.associateWith { guess ->
+        expectedCostForGuess(guess, possibleTargets, guessed, guessPool, memo)
+    }
 
-            calculateShortestPaths(target, remaining, newGuesses, result)
-        }
-
-    return result
+    val minCost = expectedByGuess.values.minOrNull() ?: return emptyList()
+    val epsilon = 1e-9
+    val bestChoices = expectedByGuess.filterValues { it <= minCost + epsilon }.keys
+    return bestChoices.toList()
 }
 
-private fun updateShortestPath(
-    target: Character,
-    existingGuesses: Path,
-    result: MutableMap<DistanceKey, List<Path>>
-) {
-    val distanceKey = DistanceKey(existingGuesses.first().character, target)
-    val previousPaths = result[distanceKey]
-
-    val guess = Guess.correct(target)
-    val newGuesses = existingGuesses + guess
-
-    if (previousPaths == null || newGuesses.size < previousPaths.first().size) {
-        result[distanceKey] = listOf(newGuesses)
-    } else if (newGuesses.size == previousPaths.first().size) {
-        result[distanceKey] = previousPaths + listOf(newGuesses)
+internal fun expectedCostForGuess(
+    guess: Character,
+    possibleTargets: Set<Character>,
+    guessed: Set<Character>,
+    guessPool: Set<Character>,
+    memo: MutableMap<ExpectedKey, Double> = mutableMapOf()
+): Double {
+    if (guessed.size >= MAX_GUESSES) {
+        return Double.POSITIVE_INFINITY
     }
+
+    val grouped = possibleTargets.groupBy { target -> makeGuess(target, guess) }
+
+    if (guess !in possibleTargets) {
+        val maxRemaining = grouped.maxOf { it.value.size }
+        if (maxRemaining >= possibleTargets.size - 1) {
+            return Double.POSITIVE_INFINITY
+        }
+    }
+
+    val total = grouped.entries.sumOf { (guessResult, targetsForFeedback) ->
+        val weight = targetsForFeedback.size.toDouble()
+        if (guessResult.correct) {
+            weight
+        } else {
+            val remaining = targetsForFeedback.toSet()
+            weight * (1.0 + expectedCost(remaining, guessed + guess, guessPool, memo))
+        }
+    }
+
+    return total / possibleTargets.size
+}
+
+internal fun expectedCost(
+    possibleTargets: Set<Character>,
+    guessed: Set<Character>,
+    guessPool: Set<Character>,
+    memo: MutableMap<ExpectedKey, Double>
+): Double {
+    if (guessed.size >= MAX_GUESSES) {
+        return Double.POSITIVE_INFINITY
+    }
+
+    if (possibleTargets.size <= 1) {
+        return 1.0
+    }
+
+    val key = ExpectedKey(possibleTargets, guessed)
+    memo[key]?.let { return it }
+
+    val availableGuesses = guessPool - guessed
+    check(availableGuesses.isNotEmpty()) {
+        "No available guesses while ${possibleTargets.size} targets remain"
+    }
+
+    val best = availableGuesses.minOf { guess ->
+        expectedCostForGuess(guess, possibleTargets, guessed, guessPool, memo)
+    }
+
+    memo[key] = best
+    return best
 }
 
 private val guessCache = ConcurrentHashMap<Pair<Character, Character>, Guess>()
@@ -250,10 +249,9 @@ enum class Accuracy {
     INCORRECT
 }
 
-internal data class DistanceKey(val starting: Character, val target: Character) {
-    override fun toString(): String {
-        return "${starting.characterName} -> ${target.characterName}"
-    }
-}
-
 private typealias Path = List<Guess>
+
+internal data class ExpectedKey(
+    val possibleTargets: Set<Character>,
+    val guessed: Set<Character>
+)
