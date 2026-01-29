@@ -1,17 +1,42 @@
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 private const val MAX_GUESSES = 4
+private const val MAX_IN_FLIGHT = 16
 
-fun getBestStarting(): List<Pair<Character, Double>> {
+suspend fun getBestStarting(): List<Pair<Character, Double>> = coroutineScope {
     val possibleTargets = Character.entries.toSet()
     val guessPool = possibleTargets
+    val workerCount = MAX_IN_FLIGHT.coerceAtMost(Character.entries.size)
 
-    val expectedByGuess = Character.entries
-        .map { guess ->
-            guess to expectedCostForGuess(guess, possibleTargets, emptySet(), guessPool)
+    val work = Channel<Character>(capacity = workerCount)
+    val results = Channel<Pair<Character, Double>>(capacity = workerCount)
+
+    repeat(workerCount) {
+        launch(Dispatchers.Default) {
+            for (guess in work) {
+                println("Working on $guess")
+                val expectedCost = expectedCostForGuess(guess, possibleTargets, emptySet(), guessPool)
+                println("Calculated cost for $guess: $expectedCost")
+                results.send(guess to expectedCost)
+            }
         }
+    }
 
-    return expectedByGuess.sortedBy { it.second }
+    launch {
+        for (guess in Character.entries) {
+            work.send(guess)
+        }
+        work.close()
+    }
+
+    val expectedByGuess = List(Character.entries.size) { results.receive() }
+    results.close()
+
+    expectedByGuess.sortedBy { it.second }
 }
 
 fun getBestChoice(existingGuesses: Path): Character? {

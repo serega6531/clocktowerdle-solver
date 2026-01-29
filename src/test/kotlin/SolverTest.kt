@@ -223,6 +223,8 @@ class SolverTest {
             assertEquals(Character.entries.size, result.size)
             val distances = result.map { it.second }
             assertEquals(distances.sorted(), distances)
+
+            result.forEach { println("${it.first.characterName} -> ${it.second}") }
         }
     }
 
