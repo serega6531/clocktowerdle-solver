@@ -7,22 +7,36 @@ import kotlinx.coroutines.launch
 private const val MAX_GUESSES = 4
 private const val MAX_IN_FLIGHT = 16
 
-suspend fun getBestStarting(): List<Pair<Character, Double>> = coroutineScope {
+suspend fun getBestStarting(
+    maxInFlight: Int = MAX_IN_FLIGHT,
+    onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
+): List<Pair<Character, Double>> = coroutineScope {
+    require(maxInFlight > 0) { "maxInFlight must be positive" }
     val possibleTargets = Character.entries.toSet()
     val guessPool = possibleTargets
-    val workerCount = MAX_IN_FLIGHT.coerceAtMost(Character.entries.size)
+    val total = Character.entries.size
+    val workerCount = maxInFlight.coerceAtMost(total)
 
     val work = Channel<Character>(capacity = workerCount)
     val results = Channel<Pair<Character, Double>>(capacity = workerCount)
+    val progress = Channel<Unit>(capacity = workerCount)
 
     repeat(workerCount) {
         launch(Dispatchers.Default) {
             for (guess in work) {
-                println("Working on $guess")
                 val expectedCost = expectedCostForGuess(guess, possibleTargets, emptySet(), guessPool)
-                println("Calculated cost for $guess: $expectedCost")
                 results.send(guess to expectedCost)
+                progress.send(Unit)
             }
+        }
+    }
+
+    val progressJob = launch {
+        var done = 0
+        repeat(total) {
+            progress.receive()
+            done += 1
+            onProgress(done, total)
         }
     }
 
@@ -33,8 +47,10 @@ suspend fun getBestStarting(): List<Pair<Character, Double>> = coroutineScope {
         work.close()
     }
 
-    val expectedByGuess = List(Character.entries.size) { results.receive() }
+    val expectedByGuess = List(total) { results.receive() }
+    progressJob.join()
     results.close()
+    progress.close()
 
     expectedByGuess.sortedBy { it.second }
 }

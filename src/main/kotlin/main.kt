@@ -1,3 +1,5 @@
+import me.tongfei.progressbar.ProgressBar
+
 suspend fun main() {
     while (true) {
         println("Choose an option:")
@@ -11,7 +13,12 @@ suspend fun main() {
         when (userInput) {
             "1" -> {
                 println("Calculating best starting characters...")
-                val bestStarting = getBestStarting()
+                val total = Character.entries.size.toLong()
+                val bestStarting = ProgressBar("Best starting", total).use { progressBar ->
+                    getBestStarting { done, _ ->
+                        progressBar.stepTo(done.toLong())
+                    }
+                }
                 bestStarting.forEach { println("${it.first.characterName} -> ${it.second}") }
             }
 
