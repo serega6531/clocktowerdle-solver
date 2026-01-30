@@ -199,17 +199,17 @@ class SolverTest {
     }
 
     @Nested
-    inner class GetBestChoiceTests {
+    inner class GetNextStepTests {
         @Test
-        fun `getBestChoice returns a valid character from remaining possibilities`() {
+        fun `getNextStep returns a valid character from remaining possibilities`() {
             val existingGuesses = listOf(
                 makeGuess(Character.CHEF, Character.LIBRARIAN)
             )
 
-            val result = getBestChoice(existingGuesses)
+            val result = getNextStep(existingGuesses)
 
-            assertNotNull(result)
-            assertNotEquals(Character.LIBRARIAN, result)
+            assertTrue(result.bestChoices.isNotEmpty())
+            assertFalse(result.bestChoices.any { it.character == Character.LIBRARIAN })
         }
     }
 
@@ -246,7 +246,8 @@ class SolverTest {
             val maxAttempts = 5
 
             while (!found && attempts < maxAttempts) {
-                val nextGuess = assertNotNull(getBestChoice(guesses))
+                val report = getNextStep(guesses)
+                val nextGuess = assertNotNull(report.bestChoices.randomOrNull()?.character)
                 val guess = makeGuess(target, nextGuess)
                 guesses.add(guess)
                 found = guess.correct

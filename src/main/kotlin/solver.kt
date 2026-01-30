@@ -6,6 +6,7 @@ import kotlinx.coroutines.launch
 
 private const val MAX_GUESSES = 4
 private const val MAX_IN_FLIGHT = 16
+private const val TOP_CHOICE_LIMIT = 5
 
 suspend fun getBestStarting(
     maxInFlight: Int = MAX_IN_FLIGHT,
@@ -55,49 +56,62 @@ suspend fun getBestStarting(
     expectedByGuess.sortedBy { it.second }
 }
 
-fun getBestChoice(existingGuesses: Path): Character? {
-    val bestChoices = getBestChoices(existingGuesses)
-    return bestChoices.randomOrNull()
-}
-
-fun getBestChoices(existingGuesses: Path): List<Character> {
+fun getPossibleTargets(existingGuesses: Path): Set<Character> {
     val guessed = existingGuesses.map { it.character }.toSet()
-    val possibleTargets =
-        (Character.entries - guessed).filterTo(mutableSetOf()) { candidate ->
-            existingGuesses.all { matches(candidate, it) }
-        }
-
-    val guessPool = Character.entries.toSet() - guessed
-    return getBestChoicesForTargets(possibleTargets, guessed, guessPool)
+    return (Character.entries - guessed).filterTo(mutableSetOf()) { candidate ->
+        existingGuesses.all { matches(candidate, it) }
+    }
 }
 
-internal fun getBestChoicesForTargets(
+data class SolverChoice(
+    val character: Character,
+    val expectedCost: Double
+)
+
+data class SolverReport(
+    val possibleTargets: Set<Character>,
+    val bestChoices: List<SolverChoice>
+)
+
+fun getNextStep(existingGuesses: Path): SolverReport {
+    val guessed = existingGuesses.map { it.character }.toSet()
+    val possibleTargets = getPossibleTargets(existingGuesses)
+    val guessPool = Character.entries.toSet() - guessed
+    val expectedByGuess = getExpectedCostsForTargets(possibleTargets, guessed, guessPool)
+    if (expectedByGuess.isEmpty()) {
+        return SolverReport(possibleTargets, emptyList())
+    }
+
+    val bestChoices = expectedByGuess.entries
+        .sortedWith(compareBy<Map.Entry<Character, Double>> { it.value }.thenBy { it.key.characterName })
+        .take(TOP_CHOICE_LIMIT)
+        .map { SolverChoice(it.key, it.value) }
+
+    return SolverReport(possibleTargets, bestChoices)
+}
+
+private fun getExpectedCostsForTargets(
     possibleTargets: Set<Character>,
     guessed: Set<Character>,
-    guessPool: Set<Character> = Character.entries.toSet()
-): List<Character> {
+    guessPool: Set<Character>
+): Map<Character, Double> {
     if (possibleTargets.isEmpty()) {
-        return emptyList()
+        return emptyMap()
     }
 
     if (guessed.size >= MAX_GUESSES) {
-        return emptyList()
+        return emptyMap()
     }
 
     val availableGuesses = guessPool - guessed
     if (availableGuesses.isEmpty()) {
-        return emptyList()
+        return emptyMap()
     }
 
     val memo = mutableMapOf<ExpectedKey, Double>()
-    val expectedByGuess = availableGuesses.associateWith { guess ->
+    return availableGuesses.associateWith { guess ->
         expectedCostForGuess(guess, possibleTargets, guessed, guessPool, memo)
-    }
-
-    val minCost = expectedByGuess.values.minOrNull() ?: return emptyList()
-    val epsilon = 1e-9
-    val bestChoices = expectedByGuess.filterValues { it <= minCost + epsilon }.keys
-    return bestChoices.toList()
+    }.filterValues { it.isFinite() }
 }
 
 internal fun expectedCostForGuess(
