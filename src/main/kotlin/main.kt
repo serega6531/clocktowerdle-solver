@@ -1,39 +1,62 @@
 import java.util.Locale
 import me.tongfei.progressbar.ProgressBar
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.main
+import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.check
+import com.github.ajalt.clikt.parameters.types.int
+import kotlinx.coroutines.runBlocking
 
-suspend fun main() {
-    while (true) {
-        println("Choose an option:")
-        println("1 - Print best starting characters")
-        println("2 - Interactive solver")
-        println("0 - Exit")
-        print("Enter your choice: ")
+abstract class SolverCommand : CliktCommand() {
+    protected val maxGuesses by option("--max-guesses", "-g", help = "Maximum number of guesses allowed")
+        .int()
+        .default(4)
+        .check("max-guesses must be positive") { it > 0 }
 
-        val userInput = readln()
+    protected val maxInFlight by option("--max-in-flight", "-j", help = "Maximum number of parallel jobs")
+        .int()
+        .default(16)
+        .check("max-in-flight must be positive") { it > 0 }
 
-        when (userInput) {
-            "1" -> {
-                printBestStartingCharacters()
-            }
+    protected val topChoiceLimit by option("--top-choice-limit", "-t", help = "Number of top choices to display")
+        .int()
+        .default(5)
+        .check("top-choice-limit must be positive") { it > 0 }
 
-            "2" -> {
-                runInteractiveSolver()
-            }
+    protected val config: SolverConfig
+        get() = SolverConfig(maxGuesses, maxInFlight, topChoiceLimit)
 
-            "0" -> return
+    protected val solver
+        get() = Solver(config)
+}
 
-            else -> {
-                println("Invalid option")
-            }
-        }
+class ClockwerdleSolver : SolverCommand() {
+    override fun run() = Unit
+}
+
+class BestStarting : SolverCommand() {
+    override fun run() = runBlocking {
+        printBestStartingCharacters(solver)
     }
 }
 
-private suspend fun printBestStartingCharacters() {
+class Interactive : SolverCommand() {
+    override fun run() = runBlocking {
+        runInteractiveSolver(solver)
+    }
+}
+
+fun main(args: Array<String>) = ClockwerdleSolver()
+    .subcommands(BestStarting(), Interactive())
+    .main(args)
+
+private suspend fun printBestStartingCharacters(solver: Solver) {
     println("Calculating best starting characters...")
     val total = Character.entries.size.toLong()
     val bestStarting = ProgressBar("Best starting", total).use { progressBar ->
-        getBestStarting { done, _ ->
+        solver.getBestStarting { done, _ ->
             progressBar.stepTo(done.toLong())
         }
     }
@@ -52,7 +75,7 @@ private suspend fun printBestStartingCharacters() {
     }
 }
 
-private suspend fun runInteractiveSolver() {
+private suspend fun runInteractiveSolver(solver: Solver) {
     val guesses = mutableListOf<Guess>()
     var character = getCharacterGuessInput()
 
@@ -65,7 +88,7 @@ private suspend fun runInteractiveSolver() {
         }
 
         guesses.add(feedback)
-        val (possibleTargets, bestChoices) = getNextStep(guesses)
+        val (possibleTargets, bestChoices) = solver.getNextStep(guesses)
 
         if (possibleTargets.isEmpty()) {
             println("No possible targets remain.")
