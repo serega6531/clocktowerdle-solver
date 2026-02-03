@@ -136,6 +136,7 @@ internal fun expectedCostForGuess(
         return Double.POSITIVE_INFINITY
     }
 
+    val newGuessed = guessed + guess
     val grouped = possibleTargets.groupBy { target -> makeGuess(target, guess) }
 
     if (guess !in possibleTargets) {
@@ -151,7 +152,13 @@ internal fun expectedCostForGuess(
             weight
         } else {
             val remaining = targetsForFeedback.toSet()
-            weight * (1.0 + expectedCost(remaining, guessed + guess, guessPool, memo))
+            val expectedCost = expectedCost(remaining, newGuessed, guessPool, memo)
+
+            if (expectedCost.isInfinite()) {
+                return Double.POSITIVE_INFINITY //short-circuit without checking the remaining targets
+            }
+
+            weight * (1.0 + expectedCost)
         }
     }
 
@@ -191,7 +198,7 @@ internal fun expectedCost(
 private val guessCache = ConcurrentHashMap<Pair<Character, Character>, Guess>()
 
 internal fun makeGuess(target: Character, guessCharacter: Character): Guess {
-    return guessCache.getOrPut(target to guessCharacter) {
+    return guessCache.computeIfAbsent(target to guessCharacter) {
         val correct = guessCharacter == target
         val originalScriptAccuracy = isAccurateNoPartial(target, guessCharacter) { it.originalScript }
         val characterTypeAccuracy = getCharacterTypeAccuracy(target, guessCharacter)
@@ -242,7 +249,7 @@ private fun getAbilityMatches(character: Character, guessCharacter: Character): 
 private val matchesCache = ConcurrentHashMap<Pair<Character, Guess>, Boolean>()
 
 internal fun matches(character: Character, guess: Guess): Boolean {
-    return matchesCache.getOrPut(character to guess) {
+    return matchesCache.computeIfAbsent(character to guess) {
         attributeMatchesNoPartial(character, guess, guess.originalScriptAccuracy) { it.originalScript } &&
                 characterTypeMatches(character, guess) &&
                 attributeMatchesNoPartial(character, guess, guess.wakesInNightAccuracy) { it.wakesInNight } &&
