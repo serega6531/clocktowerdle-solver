@@ -201,7 +201,7 @@ class SolverTest {
     @Nested
     inner class GetNextStepTests {
         @Test
-        fun `getNextStep returns a valid character from remaining possibilities`() {
+        fun `getNextStep returns a valid character from remaining possibilities`() = runTest {
             val existingGuesses = listOf(
                 makeGuess(Character.CHEF, Character.LIBRARIAN)
             )
@@ -231,7 +231,7 @@ class SolverTest {
     @Nested
     inner class IntegrationTests {
         @Test
-        fun `full game simulation - guessing CHEF`() {
+        fun `full game simulation - guessing CHEF`() = runTest {
             val target = Character.CHEF
             val guesses = mutableListOf<Guess>()
 

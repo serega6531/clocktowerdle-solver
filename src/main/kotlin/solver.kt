@@ -4,18 +4,81 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
-private const val MAX_GUESSES = 4
-private const val MAX_IN_FLIGHT = 16
+private const val MAX_GUESSES = 5
+private const val DEFAULT_MAX_IN_FLIGHT = 2
 private const val TOP_CHOICE_LIMIT = 5
 
 suspend fun getBestStarting(
-    maxInFlight: Int = MAX_IN_FLIGHT,
+    maxInFlight: Int = DEFAULT_MAX_IN_FLIGHT,
     onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
-): List<Pair<Character, Double>> = coroutineScope {
+): List<Pair<Character, Double>> {
+    val inputs = buildSolverInputs(emptyList())
+    val expectedByGuess = getExpectedCostsParallel(
+        inputs,
+        maxInFlight,
+        onProgress
+    )
+    return expectedByGuess.toList().sortedBy { it.second }
+}
+
+suspend fun getNextStep(existingGuesses: Path): SolverReport {
+    val inputs = buildSolverInputs(existingGuesses)
+    val expectedByGuess = getExpectedCostsParallel(
+        inputs,
+        DEFAULT_MAX_IN_FLIGHT
+    )
+    val bestChoices = bestChoicesFrom(expectedByGuess, TOP_CHOICE_LIMIT)
+    return SolverReport(inputs.possibleTargets, bestChoices)
+}
+
+fun getPossibleTargets(existingGuesses: Path): Set<Character> {
+    val guessed = existingGuesses.map { it.character }.toSet()
+    return (Character.entries - guessed).filterTo(mutableSetOf()) { candidate ->
+        existingGuesses.all { matches(candidate, it) }
+    }
+}
+
+private fun buildSolverInputs(existingGuesses: Path): SolverInputs {
+    val guessed = existingGuesses.map { it.character }.toSet()
+    val possibleTargets = getPossibleTargets(existingGuesses)
+    val guessPool = Character.entries.toSet() - guessed
+    return SolverInputs(possibleTargets, guessed, guessPool)
+}
+
+private fun bestChoicesFrom(expectedByGuess: Map<Character, Double>, limit: Int): List<SolverChoice> {
+    if (expectedByGuess.isEmpty()) {
+        return emptyList()
+    }
+
+    return expectedByGuess
+        .filterValues { it.isFinite() }
+        .entries
+        .sortedWith(compareBy<Map.Entry<Character, Double>> { it.value }.thenBy { it.key.characterName })
+        .take(limit)
+        .map { SolverChoice(it.key, it.value) }
+}
+
+private suspend fun getExpectedCostsParallel(
+    inputs: SolverInputs,
+    maxInFlight: Int,
+    onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
+): Map<Character, Double> = coroutineScope {
     require(maxInFlight > 0) { "maxInFlight must be positive" }
-    val possibleTargets = Character.entries.toSet()
-    val guessPool = possibleTargets
-    val total = Character.entries.size
+
+    if (inputs.possibleTargets.isEmpty()) {
+        return@coroutineScope emptyMap()
+    }
+
+    if (inputs.guessed.size >= MAX_GUESSES) {
+        return@coroutineScope emptyMap()
+    }
+
+    val availableGuesses = inputs.availableGuesses
+    if (availableGuesses.isEmpty()) {
+        return@coroutineScope emptyMap()
+    }
+
+    val total = availableGuesses.size
     val workerCount = maxInFlight.coerceAtMost(total)
 
     val work = Channel<Character>(capacity = workerCount)
@@ -25,7 +88,13 @@ suspend fun getBestStarting(
     repeat(workerCount) {
         launch(Dispatchers.Default) {
             for (guess in work) {
-                val expectedCost = expectedCostForGuess(guess, possibleTargets, emptySet(), guessPool)
+                val expectedCost = expectedCostForGuess(
+                    guess,
+                    inputs.possibleTargets,
+                    inputs.guessed,
+                    inputs.guessPool,
+                    mutableMapOf()
+                )
                 results.send(guess to expectedCost)
                 progress.send(Unit)
             }
@@ -42,76 +111,18 @@ suspend fun getBestStarting(
     }
 
     launch {
-        for (guess in Character.entries) {
+        for (guess in availableGuesses) {
             work.send(guess)
         }
         work.close()
     }
 
-    val expectedByGuess = List(total) { results.receive() }
+    val expectedByGuess = List(total) { results.receive() }.toMap()
     progressJob.join()
     results.close()
     progress.close()
 
-    expectedByGuess.sortedBy { it.second }
-}
-
-fun getPossibleTargets(existingGuesses: Path): Set<Character> {
-    val guessed = existingGuesses.map { it.character }.toSet()
-    return (Character.entries - guessed).filterTo(mutableSetOf()) { candidate ->
-        existingGuesses.all { matches(candidate, it) }
-    }
-}
-
-data class SolverChoice(
-    val character: Character,
-    val expectedCost: Double
-)
-
-data class SolverReport(
-    val possibleTargets: Set<Character>,
-    val bestChoices: List<SolverChoice>
-)
-
-fun getNextStep(existingGuesses: Path): SolverReport {
-    val guessed = existingGuesses.map { it.character }.toSet()
-    val possibleTargets = getPossibleTargets(existingGuesses)
-    val guessPool = Character.entries.toSet() - guessed
-    val expectedByGuess = getExpectedCostsForTargets(possibleTargets, guessed, guessPool)
-    if (expectedByGuess.isEmpty()) {
-        return SolverReport(possibleTargets, emptyList())
-    }
-
-    val bestChoices = expectedByGuess.entries
-        .sortedWith(compareBy<Map.Entry<Character, Double>> { it.value }.thenBy { it.key.characterName })
-        .take(TOP_CHOICE_LIMIT)
-        .map { SolverChoice(it.key, it.value) }
-
-    return SolverReport(possibleTargets, bestChoices)
-}
-
-private fun getExpectedCostsForTargets(
-    possibleTargets: Set<Character>,
-    guessed: Set<Character>,
-    guessPool: Set<Character>
-): Map<Character, Double> {
-    if (possibleTargets.isEmpty()) {
-        return emptyMap()
-    }
-
-    if (guessed.size >= MAX_GUESSES) {
-        return emptyMap()
-    }
-
-    val availableGuesses = guessPool - guessed
-    if (availableGuesses.isEmpty()) {
-        return emptyMap()
-    }
-
-    val memo = mutableMapOf<ExpectedKey, Double>()
-    return availableGuesses.associateWith { guess ->
-        expectedCostForGuess(guess, possibleTargets, guessed, guessPool, memo)
-    }.filterValues { it.isFinite() }
+    expectedByGuess
 }
 
 internal fun expectedCostForGuess(
@@ -273,6 +284,27 @@ internal fun abilityMatches(character: Character, guess: Guess): Boolean {
     return expectedMatches == guess.abilityMatches
 }
 
+private typealias Path = List<Guess>
+
+private data class SolverInputs(
+    val possibleTargets: Set<Character>,
+    val guessed: Set<Character>,
+    val guessPool: Set<Character>
+) {
+    val availableGuesses: Set<Character>
+        get() = guessPool - guessed
+}
+
+data class SolverChoice(
+    val character: Character,
+    val expectedCost: Double
+)
+
+data class SolverReport(
+    val possibleTargets: Set<Character>,
+    val bestChoices: List<SolverChoice>
+)
+
 data class Guess(
     val character: Character,
     val correct: Boolean,
@@ -303,8 +335,6 @@ enum class Accuracy {
     PARTIALLY_CORRECT,
     INCORRECT
 }
-
-private typealias Path = List<Guess>
 
 internal data class ExpectedKey(
     val possibleTargets: Set<Character>,

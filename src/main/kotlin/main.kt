@@ -52,7 +52,7 @@ private suspend fun printBestStartingCharacters() {
     }
 }
 
-private fun runInteractiveSolver() {
+private suspend fun runInteractiveSolver() {
     val guesses = mutableListOf<Guess>()
     var character = getCharacterGuessInput()
 
