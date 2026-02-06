@@ -136,10 +136,11 @@ private fun getCharacterGuessInput(): Character {
 
 private fun getFeedbackInput(character: Character): Guess {
     while (true) {
-        println("Enter the feedback (e.g. CORRECT, PARTIALLY_CORRECT, INCORRECT, CORRECT, INCORRECT, 1) or CORRECT:")
+        println("Enter the feedback (e.g. +, ~, -, +, -, 1) or CORRECT:")
+        print("> ")
         val feedback = readln().split(" ")
 
-        if (feedback.first() == "CORRECT") {
+        if (feedback.singleOrNull() == "CORRECT") {
             return Guess.correct(character)
         }
 
