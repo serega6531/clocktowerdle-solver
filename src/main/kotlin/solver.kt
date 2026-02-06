@@ -1,3 +1,5 @@
+package ru.serega6531.clocktowerdle
+
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel

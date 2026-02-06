@@ -1,3 +1,5 @@
+package ru.serega6531.clocktowerdle
+
 import java.util.Locale
 import me.tongfei.progressbar.ProgressBar
 import com.github.ajalt.clikt.core.CliktCommand

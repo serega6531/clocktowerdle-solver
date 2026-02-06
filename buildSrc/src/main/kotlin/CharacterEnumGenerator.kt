@@ -70,6 +70,8 @@ object CharacterEnumGenerator {
         return """// This file is auto-generated. Do not edit manually.
 // Generated from characters.js
 
+package ru.serega6531.clocktowerdle
+
 enum class Character(
     val characterName: String,
     val originalScript: OriginalScript,

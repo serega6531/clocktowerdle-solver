@@ -1,3 +1,5 @@
+package ru.serega6531.clocktowerdle
+
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Nested
@@ -127,7 +129,7 @@ class SolverTest {
         }
 
         @ParameterizedTest
-        @MethodSource("SolverTest#accuracyTestCases")
+        @MethodSource("ru.serega6531.clocktowerdle.SolverTest#accuracyTestCases")
         fun `matches correctly validates other accuracy attributes`(
             target: Character,
             guess: Character,
