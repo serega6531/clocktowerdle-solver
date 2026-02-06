@@ -12,6 +12,9 @@ import kotlin.time.Duration.Companion.hours
 
 class SolverTest {
 
+    private val defaultSolver: Solver
+        get() = Solver(SolverConfig())
+
     @Nested
     inner class MakeGuessTests {
         @Test
@@ -19,7 +22,7 @@ class SolverTest {
             val target = Character.CHEF
             val guess = Character.CHEF
 
-            val result = makeGuess(target, guess)
+            val result = defaultSolver.makeGuess(target, guess)
 
             assertTrue(result.correct)
             assertEquals(Accuracy.CORRECT, result.originalScriptAccuracy)
@@ -35,7 +38,7 @@ class SolverTest {
             val target = Character.CHEF // TOWNSFOLK, TROUBLE_BREWING
             val guess = Character.IMP // DEMON, TROUBLE_BREWING
 
-            val result = makeGuess(target, guess)
+            val result = defaultSolver.makeGuess(target, guess)
 
             assertFalse(result.correct)
             assertEquals(Accuracy.CORRECT, result.originalScriptAccuracy)
@@ -47,7 +50,7 @@ class SolverTest {
             val target = Character.CHEF // TOWNSFOLK
             val guess = Character.BUTLER // OUTSIDER
 
-            val result = makeGuess(target, guess)
+            val result = defaultSolver.makeGuess(target, guess)
 
             assertFalse(result.correct)
             assertEquals(Accuracy.PARTIALLY_CORRECT, result.characterTypeAccuracy)
@@ -58,7 +61,7 @@ class SolverTest {
             val target = Character.CHEF // abilities: LEARNS_NUMBER, POSITIONING, ALIGNMENT
             val guess = Character.EMPATH // abilities: ALIGNMENT, LEARNS_NUMBER, POSITIONING
 
-            val result = makeGuess(target, guess)
+            val result = defaultSolver.makeGuess(target, guess)
 
             assertEquals(3, result.abilityMatches)
         }
@@ -68,7 +71,7 @@ class SolverTest {
             val target = Character.SOLDIER // abilities: DEMON, PREVENTS_DEATH
             val guess = Character.BUTLER // abilities: NOMINATION_VOTING
 
-            val result = makeGuess(target, guess)
+            val result = defaultSolver.makeGuess(target, guess)
 
             assertEquals(0, result.abilityMatches)
         }
@@ -81,14 +84,14 @@ class SolverTest {
             val target = Character.CHEF
             val guess = Guess.correct(target)
 
-            assertTrue(matches(target, guess))
+            assertTrue(defaultSolver.matches(target, guess))
         }
 
         @Test
         fun `matches filters correctly based on character type accuracy`() {
             val actualTarget = Character.BUTLER // OUTSIDER
             val guessChar = Character.CHEF // TOWNSFOLK
-            val guess = makeGuess(actualTarget, guessChar)
+            val guess = defaultSolver.makeGuess(actualTarget, guessChar)
 
             // BUTLER (OUTSIDER) vs CHEF (TOWNSFOLK) - same team, different type
             // So guess.characterTypeAccuracy = PARTIALLY_CORRECT
@@ -98,29 +101,29 @@ class SolverTest {
             // This means the target is the otherInTeam of TOWNSFOLK, which is OUTSIDER
             // So any OUTSIDER candidate should match
             val outsiderCandidate = Character.DRUNK // Another OUTSIDER
-            assertTrue(matches(outsiderCandidate, guess))
+            assertTrue(defaultSolver.matches(outsiderCandidate, guess))
 
             // But TOWNSFOLK candidates should NOT match
-            assertFalse(matches(guessChar, guess))
+            assertFalse(defaultSolver.matches(guessChar, guess))
         }
 
         @Test
         fun `matches validates ability matches count correctly`() {
             val actualTarget = Character.CHEF // Has some abilities
             val guessChar = Character.EMPATH // Has some overlapping abilities
-            val guess = makeGuess(actualTarget, guessChar)
+            val guess = defaultSolver.makeGuess(actualTarget, guessChar)
 
             // The guess contains abilityMatches count based on CHEF's abilities
             // A candidate matches if it has the same number of abilities in common with EMPATH
             // CHEF should match its own guess
-            assertTrue(matches(actualTarget, guess))
+            assertTrue(defaultSolver.matches(actualTarget, guess))
 
             // But a character with a different overlap count should NOT match
             val differentCandidate = Character.SOLDIER
             // First check if SOLDIER actually has a different overlap with EMPATH
             val soldierOverlap = differentCandidate.ability.count { it in guessChar.ability }
             assertNotEquals(guess.abilityMatches, soldierOverlap)
-            assertFalse(matches(differentCandidate, guess))
+            assertFalse(defaultSolver.matches(differentCandidate, guess))
         }
 
         @ParameterizedTest
@@ -132,14 +135,14 @@ class SolverTest {
             extractor: (Character) -> Any,
             extractAccuracy: (Guess) -> Accuracy
         ) {
-            val guessResult = makeGuess(target, guess)
+            val guessResult = defaultSolver.makeGuess(target, guess)
             val actualAccuracy = extractAccuracy(guessResult)
 
             // Verify the accuracy is what we expect
             assertEquals(expectedAccuracy, actualAccuracy)
 
             // The target should always match its own guess result
-            assertTrue(matches(target, guessResult))
+            assertTrue(defaultSolver.matches(target, guessResult))
 
             val guessValue = extractor(guess)
             val targetValue = extractor(target)
@@ -160,19 +163,19 @@ class SolverTest {
     inner class CharacterTypeAccuracyTests {
         @Test
         fun `getCharacterTypeAccuracy returns CORRECT for same type`() {
-            val result = getCharacterTypeAccuracy(Character.CHEF, Character.LIBRARIAN)
+            val result = defaultSolver.getCharacterTypeAccuracy(Character.CHEF, Character.LIBRARIAN)
             assertEquals(Accuracy.CORRECT, result)
         }
 
         @Test
         fun `getCharacterTypeAccuracy returns PARTIALLY_CORRECT for same team`() {
-            val result = getCharacterTypeAccuracy(Character.CHEF, Character.BUTLER)
+            val result = defaultSolver.getCharacterTypeAccuracy(Character.CHEF, Character.BUTLER)
             assertEquals(Accuracy.PARTIALLY_CORRECT, result)
         }
 
         @Test
         fun `getCharacterTypeAccuracy returns INCORRECT for different team`() {
-            val result = getCharacterTypeAccuracy(Character.CHEF, Character.IMP)
+            val result = defaultSolver.getCharacterTypeAccuracy(Character.CHEF, Character.IMP)
             assertEquals(Accuracy.INCORRECT, result)
         }
     }
@@ -183,18 +186,18 @@ class SolverTest {
         fun `abilityMatches returns true when counts match`() {
             val character = Character.CHEF
             val guessChar = Character.EMPATH
-            val guess = makeGuess(character, guessChar)
+            val guess = defaultSolver.makeGuess(character, guessChar)
 
-            assertTrue(abilityMatches(character, guess))
+            assertTrue(defaultSolver.abilityMatches(character, guess))
         }
 
         @Test
         fun `abilityMatches returns false when counts don't match`() {
             val character = Character.CHEF
             val guessChar = Character.EMPATH
-            val guess = makeGuess(character, guessChar).copy(abilityMatches = 0)
+            val guess = defaultSolver.makeGuess(character, guessChar).copy(abilityMatches = 0)
 
-            assertFalse(abilityMatches(character, guess))
+            assertFalse(defaultSolver.abilityMatches(character, guess))
         }
     }
 
@@ -203,10 +206,10 @@ class SolverTest {
         @Test
         fun `getNextStep returns a valid character from remaining possibilities`() = runTest {
             val existingGuesses = listOf(
-                makeGuess(Character.CHEF, Character.LIBRARIAN)
+                defaultSolver.makeGuess(Character.CHEF, Character.LIBRARIAN)
             )
 
-            val result = getNextStep(existingGuesses)
+            val result = defaultSolver.getNextStep(existingGuesses)
 
             assertTrue(result.bestChoices.isNotEmpty())
             assertFalse(result.bestChoices.any { it.character == Character.LIBRARIAN })
@@ -218,7 +221,7 @@ class SolverTest {
 
         @Test
         fun `getBestStarting returns all characters sorted by average distance`() = runTest(timeout = 1.hours) {
-            val result = getBestStarting()
+            val result = defaultSolver.getBestStarting()
 
             assertEquals(Character.entries.size, result.size)
             val distances = result.map { it.second }
@@ -237,7 +240,7 @@ class SolverTest {
 
             // Make first guess ourselves (like CLI does)
             val firstGuessCharacter = Character.NO_DASHII
-            val firstGuess = makeGuess(target, firstGuessCharacter)
+            val firstGuess = defaultSolver.makeGuess(target, firstGuessCharacter)
             guesses.add(firstGuess)
 
             // Make subsequent guesses using solver
@@ -246,9 +249,9 @@ class SolverTest {
             val maxAttempts = 5
 
             while (!found && attempts < maxAttempts) {
-                val report = getNextStep(guesses)
+                val report = defaultSolver.getNextStep(guesses)
                 val nextGuess = assertNotNull(report.bestChoices.randomOrNull()?.character)
-                val guess = makeGuess(target, nextGuess)
+                val guess = defaultSolver.makeGuess(target, nextGuess)
                 guesses.add(guess)
                 found = guess.correct
                 attempts++
