@@ -83,16 +83,6 @@ where:
 .\build\install\clockwerdle-solver\bin\clockwerdle-solver best-starting
 ```
 
-Options:
-- `--max-guesses N` or `-g N`: Maximum number of guesses allowed (default: 4)
-- `--max-in-flight N` or `-j N`: Parallel worker threads (default: 16)
-- `--top-choice-limit N` or `-t N`: Number of top choices to display (default: 5)
-
-Example:
-```bash
-.\build\install\clockwerdle-solver\bin\clockwerdle-solver best-starting -g 5 -j 2
-```
-
 #### Interactive Solver
 
 ```bash
@@ -121,9 +111,15 @@ or shorthand:
 ### Command-Line Options
 
 All commands support:
-- `--max-guesses N` / `-g N`: Set maximum guesses (default: 4)
+- `--max-guesses N` / `-g N`: Set maximum of guesses allowed (default: 4)
 - `--max-in-flight N` / `-j N`: Set parallelism level (default: 16)
-- `--top-choice-limit N` / `-t N`: Number of suggestions to show (default: 5)
+- `--top-choice-limit N` / `-t N`: Number of top choices to display (default: 5)
+- `--include-inefficient-branches` / `-i`: Include branches where the guess cannot be optimal
+
+Example:
+```bash
+.\build\install\clockwerdle-solver\bin\clockwerdle-solver best-starting -g 5 -j 2
+```
 
 ### Example
 ```
