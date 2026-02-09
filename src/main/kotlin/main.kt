@@ -8,6 +8,7 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.check
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.types.int
 import kotlinx.coroutines.runBlocking
 
@@ -27,8 +28,11 @@ abstract class SolverCommand : CliktCommand() {
         .default(5)
         .check("top-choice-limit must be positive") { it > 0 }
 
+    protected val includeInefficientBranches by option("--include-inefficient-branches", "-i", help = "Include branches where the guess cannot be optimal")
+        .flag(default = false)
+
     protected val config: SolverConfig
-        get() = SolverConfig(maxGuesses, maxInFlight, topChoiceLimit)
+        get() = SolverConfig(maxGuesses, maxInFlight, topChoiceLimit, includeInefficientBranches)
 
     protected val solver
         get() = Solver(config)
@@ -186,20 +190,11 @@ private fun String.toAccuracy(): Accuracy = when (this.uppercase()) {
 private fun printCharacterReport(characters: Collection<Character>) {
     val sorted = characters.sortedBy { it.characterName }
     println("Possible targets (${sorted.size}):")
-    if (sorted.isEmpty()) {
-        println("None")
-        return
-    }
-
     println(sorted.joinToString(", ") { it.characterName })
 }
 
 private fun printChoiceReport(choices: List<SolverChoice>) {
     println("Best next guesses (${choices.size}):")
-    if (choices.isEmpty()) {
-        println("None")
-        return
-    }
 
     val showIndex = choices.size > 1
     val items = choices.mapIndexed { index, choice ->

@@ -9,7 +9,8 @@ import kotlinx.coroutines.launch
 data class SolverConfig(
     val maxGuesses: Int = 4,
     val maxInFlight: Int = 16,
-    val topChoiceLimit: Int = 5
+    val topChoiceLimit: Int = 5,
+    val includeInefficientBranches: Boolean = false
 )
 
 class Solver(private val config: SolverConfig) {
@@ -134,7 +135,7 @@ class Solver(private val config: SolverConfig) {
         val newGuessed = guessed + guess
         val grouped = possibleTargets.groupBy { target -> makeGuess(target, guess) }
 
-        if (guess !in possibleTargets) {
+        if (!config.includeInefficientBranches && guess !in possibleTargets) {
             val maxRemaining = grouped.maxOf { it.value.size }
             if (maxRemaining >= possibleTargets.size - 1) {
                 return Double.POSITIVE_INFINITY
