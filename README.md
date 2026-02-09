@@ -1,6 +1,6 @@
 # Clockwerdle Solver
 
-A Kotlin-based solver for Clockwerdle, a Wordle-style guessing game based on Blood on the Clocktower characters. The solver helps you find optimal guesses using advanced game theory algorithms.
+A Kotlin-based solver for [Clockwerdle](https://clocktowerdle.com/), a Wordle-style guessing game based on Blood on the Clocktower characters. The solver helps you find optimal guesses using advanced game theory algorithms.
 
 ## What is Clockwerdle?
 
@@ -23,7 +23,7 @@ Clockwerdle is a guessing game where players attempt to identify a Blood on the 
 
 ### Core Strategy
 
-The solver uses an **expected value minimization algorithm** (expectimax) to find optimal guesses. For each possible guess, it calculates the expected number of guesses needed to solve the puzzle by:
+The solver uses an **expected cost minimization algorithm** (expectimax) to find optimal guesses. For each possible guess, it calculates the expected number of guesses needed to solve the puzzle by:
 
 1. **Simulating All Outcomes**: For each candidate guess, simulate the feedback you'd receive for every possible target character
 2. **Grouping by Feedback**: Group remaining possibilities by the feedback pattern they'd produce
