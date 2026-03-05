@@ -1,6 +1,6 @@
 package ru.serega6531.clocktowerdle
 
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -10,7 +10,8 @@ data class SolverConfig(
     val maxGuesses: Int = 4,
     val maxInFlight: Int = 16,
     val topChoiceLimit: Int = 5,
-    val includeInefficientBranches: Boolean = false
+    val includeInefficientBranches: Boolean = false,
+    val dispatcher: CoroutineDispatcher = Dispatchers.Default
 )
 
 class Solver(private val config: SolverConfig) {
@@ -82,7 +83,7 @@ class Solver(private val config: SolverConfig) {
         val progress = Channel<Unit>(capacity = workerCount)
 
         repeat(workerCount) {
-            launch(Dispatchers.Default) {
+            launch(config.dispatcher) {
                 for (guess in work) {
                     val expectedCost = expectedCostForGuess(
                         guess,
@@ -191,10 +192,10 @@ class Solver(private val config: SolverConfig) {
         return best
     }
 
-    private val guessCache = ConcurrentHashMap<Pair<Character, Character>, Guess>()
+    private val guessCache = newCacheMap<Pair<Character, Character>, Guess>()
 
     internal fun makeGuess(target: Character, guessCharacter: Character): Guess {
-        return guessCache.computeIfAbsent(target to guessCharacter) {
+        return guessCache.getOrPut(target to guessCharacter) {
             val correct = guessCharacter == target
             val originalScriptAccuracy = isAccurateNoPartial(target, guessCharacter) { it.originalScript }
             val characterTypeAccuracy = getCharacterTypeAccuracy(target, guessCharacter)
@@ -242,10 +243,10 @@ class Solver(private val config: SolverConfig) {
         return character.ability.count { it in guessCharacter.ability }
     }
 
-    private val matchesCache = ConcurrentHashMap<Pair<Character, Guess>, Boolean>()
+    private val matchesCache = newCacheMap<Pair<Character, Guess>, Boolean>()
 
     internal fun matches(character: Character, guess: Guess): Boolean {
-        return matchesCache.computeIfAbsent(character to guess) {
+        return matchesCache.getOrPut(character to guess) {
             attributeMatchesNoPartial(character, guess, guess.originalScriptAccuracy) { it.originalScript } &&
                     characterTypeMatches(character, guess) &&
                     attributeMatchesNoPartial(character, guess, guess.wakesInNightAccuracy) { it.wakesInNight } &&
@@ -261,10 +262,10 @@ class Solver(private val config: SolverConfig) {
         accuracy: Accuracy,
         extractor: (Character) -> Any
     ): Boolean {
-        val characterAttri = extractor(character)
-        val guessAttri = extractor(guess.character)
+        val characterAttr = extractor(character)
+        val guessAttr = extractor(guess.character)
 
-        val same = characterAttri == guessAttri
+        val same = characterAttr == guessAttr
         val correct = accuracy == Accuracy.CORRECT
 
         return (same && correct) || (!same && !correct)
@@ -308,37 +309,6 @@ data class SolverReport(
     val possibleTargets: Set<Character>,
     val bestChoices: List<SolverChoice>
 )
-
-data class Guess(
-    val character: Character,
-    val correct: Boolean,
-    val originalScriptAccuracy: Accuracy,
-    val characterTypeAccuracy: Accuracy,
-    val wakesInNightAccuracy: Accuracy,
-    val selectsPlayerAccuracy: Accuracy,
-    val learnsInfoAccuracy: Accuracy,
-    val abilityMatches: Int,
-) {
-    companion object {
-        fun correct(character: Character) =
-            Guess(
-                character,
-                true,
-                Accuracy.CORRECT,
-                Accuracy.CORRECT,
-                Accuracy.CORRECT,
-                Accuracy.CORRECT,
-                Accuracy.CORRECT,
-                character.ability.size
-            )
-    }
-}
-
-enum class Accuracy {
-    CORRECT,
-    PARTIALLY_CORRECT,
-    INCORRECT
-}
 
 internal data class ExpectedKey(
     val possibleTargets: Set<Character>,

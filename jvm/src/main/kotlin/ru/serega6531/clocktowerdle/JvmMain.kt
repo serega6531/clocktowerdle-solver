@@ -10,6 +10,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.types.int
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
 abstract class SolverCommand : CliktCommand() {
@@ -32,7 +33,13 @@ abstract class SolverCommand : CliktCommand() {
         .flag(default = false)
 
     protected val config: SolverConfig
-        get() = SolverConfig(maxGuesses, maxInFlight, topChoiceLimit, includeInefficientBranches)
+        get() = SolverConfig(
+            maxGuesses = maxGuesses,
+            maxInFlight = maxInFlight,
+            topChoiceLimit = topChoiceLimit,
+            includeInefficientBranches = includeInefficientBranches,
+            dispatcher = Dispatchers.Default
+        )
 
     protected val solver
         get() = Solver(config)

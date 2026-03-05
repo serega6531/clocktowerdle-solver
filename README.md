@@ -72,7 +72,7 @@ where:
 ### Building
 
 ```bash
-./gradlew installDist
+./gradlew :jvm:installDist
 ```
 
 ### Running
@@ -80,13 +80,13 @@ where:
 #### Find Best Starting Character
 
 ```bash
-.\build\install\clockwerdle-solver\bin\clockwerdle-solver best-starting
+.\jvm\build\install\jvm\bin\jvm best-starting
 ```
 
 #### Interactive Solver
 
 ```bash
-.\build\install\clockwerdle-solver\bin\clockwerdle-solver interactive
+.\jvm\build\install\jvm\bin\jvm interactive
 ```
 
 The interactive mode guides you step-by-step:
@@ -118,12 +118,12 @@ All commands support:
 
 Example:
 ```bash
-.\build\install\clockwerdle-solver\bin\clockwerdle-solver best-starting -g 5 -j 2
+.\jvm\build\install\jvm\bin\jvm best-starting -g 5 -j 2
 ```
 
 ### Example
 ```
-.\build\install\clockwerdle-solver\bin\clockwerdle-solver interactive
+.\jvm\build\install\jvm\bin\jvm interactive
 Enter your guess: DRUNK
 Enter the feedback (e.g. +, ~, -, +, -, 1) or CORRECT:
 > - - - - - 0
