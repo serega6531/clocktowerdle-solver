@@ -24,9 +24,12 @@ class Solver(private val config: SolverConfig) {
         return expectedByGuess.toList().sortedBy { it.second }
     }
 
-    suspend fun getNextStep(existingGuesses: Path): SolverReport {
+    suspend fun getNextStep(
+        existingGuesses: Path,
+        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
+    ): SolverReport {
         val inputs = buildSolverInputs(existingGuesses)
-        val expectedByGuess = getExpectedCostsParallel(inputs)
+        val expectedByGuess = getExpectedCostsParallel(inputs, onProgress)
         val bestChoices = bestChoicesFrom(expectedByGuess, config.topChoiceLimit)
         return SolverReport(inputs.possibleTargets, bestChoices)
     }

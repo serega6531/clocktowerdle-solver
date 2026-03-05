@@ -124,7 +124,11 @@ private fun computeAndRender(ui: Ui, guesses: List<Guess>) {
     ui.status.textContent = "Calculating next step..."
     val solver = buildSolver(ui)
     uiScope.launch {
-        val report = solver.getNextStep(guesses)
+        val report = solver.getNextStep(guesses) { done, total ->
+            println("Progress: $done/$total")
+            val percent = if (total == 0) 0 else ((done.toDouble() / total) * 100.0).roundToInt()
+            ui.status.textContent = "Calculating next step... $done/$total ($percent%)"
+        }
         renderReport(ui, report, guesses)
         ui.status.textContent = ""
     }
