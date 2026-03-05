@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clockwerdle Solver</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <main class="shell">
+    <header class="hero">
+      <h1>Clockwerdle Solver</h1>
+    </header>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Add a Guess</h2>
+        <div class="panel-actions">
+          <button id="reset" class="ghost">Reset</button>
+        </div>
+      </div>
+
+      <div class="guess-line">
+        <label class="field">
+          <span class="section-subtitle">Guess</span>
+          <select id="guess-select"></select>
+        </label>
+      </div>
+
+      <p class="section-subtitle">Accuracy</p>
+
+      <div class="grid attributes">
+        <label class="field">
+          <span>Original Script</span>
+          <div class="accuracy-group" role="radiogroup" aria-label="Original Script">
+            <label class="accuracy-option">
+              <input type="radio" name="original-script" value="INCORRECT" checked />
+              <span class="accuracy-box" data-accuracy="INCORRECT" aria-hidden="true"></span>
+            </label>
+            <label class="accuracy-option">
+              <input type="radio" name="original-script" value="CORRECT" />
+              <span class="accuracy-box" data-accuracy="CORRECT" aria-hidden="true"></span>
+            </label>
+          </div>
+        </label>
+        <label class="field">
+          <span>Character Type</span>
+          <div class="accuracy-group" role="radiogroup" aria-label="Character Type">
+            <label class="accuracy-option">
+              <input type="radio" name="character-type" value="INCORRECT" checked />
+              <span class="accuracy-box" data-accuracy="INCORRECT" aria-hidden="true"></span>
+            </label>
+            <label class="accuracy-option">
+              <input type="radio" name="character-type" value="PARTIALLY_CORRECT" />
+              <span class="accuracy-box" data-accuracy="PARTIALLY_CORRECT" aria-hidden="true"></span>
+            </label>
+            <label class="accuracy-option">
+              <input type="radio" name="character-type" value="CORRECT" />
+              <span class="accuracy-box" data-accuracy="CORRECT" aria-hidden="true"></span>
+            </label>
+          </div>
+        </label>
+        <label class="field">
+          <span>Wakes In Night</span>
+          <div class="accuracy-group" role="radiogroup" aria-label="Wakes In Night">
+            <label class="accuracy-option">
+              <input type="radio" name="wakes-in-night" value="INCORRECT" checked />
+              <span class="accuracy-box" data-accuracy="INCORRECT" aria-hidden="true"></span>
+            </label>
+            <label class="accuracy-option">
+              <input type="radio" name="wakes-in-night" value="CORRECT" />
+              <span class="accuracy-box" data-accuracy="CORRECT" aria-hidden="true"></span>
+            </label>
+          </div>
+        </label>
+        <label class="field">
+          <span>Selects Player</span>
+          <div class="accuracy-group" role="radiogroup" aria-label="Selects Player">
+            <label class="accuracy-option">
+              <input type="radio" name="selects-player" value="INCORRECT" checked />
+              <span class="accuracy-box" data-accuracy="INCORRECT" aria-hidden="true"></span>
+            </label>
+            <label class="accuracy-option">
+              <input type="radio" name="selects-player" value="CORRECT" />
+              <span class="accuracy-box" data-accuracy="CORRECT" aria-hidden="true"></span>
+            </label>
+          </div>
+        </label>
+        <label class="field">
+          <span>Learns Info</span>
+          <div class="accuracy-group" role="radiogroup" aria-label="Learns Info">
+            <label class="accuracy-option">
+              <input type="radio" name="learns-info" value="INCORRECT" checked />
+              <span class="accuracy-box" data-accuracy="INCORRECT" aria-hidden="true"></span>
+            </label>
+            <label class="accuracy-option">
+              <input type="radio" name="learns-info" value="CORRECT" />
+              <span class="accuracy-box" data-accuracy="CORRECT" aria-hidden="true"></span>
+            </label>
+          </div>
+        </label>
+        <label class="field">
+          <span>Ability Matches</span>
+          <input id="ability-matches" type="number" min="0" value="0" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="add-guess" class="primary">Add Guess</button>
+        <button id="mark-correct" class="secondary">Mark Correct</button>
+      </div>
+    </section>
+
+    <section class="panel compact">
+      <div class="panel-header">
+        <h2>Solver Settings</h2>
+      </div>
+      <div class="grid settings">
+        <label class="field">
+          <span>Max Guesses</span>
+          <input id="max-guesses" type="number" min="1" value="4" />
+        </label>
+        <label class="field">
+          <span>Top Choices</span>
+          <input id="top-choices" type="number" min="1" value="5" />
+        </label>
+        <label class="field checkbox">
+          <input id="include-inefficient" type="checkbox" />
+          <span>Include Inefficient Branches</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Session Output</h2>
+        <div id="status" class="status"></div>
+      </div>
+      <div class="output">
+        <div>
+          <h3>Guesses</h3>
+          <ul id="guesses" class="list"></ul>
+        </div>
+        <div>
+          <h3>Possible Targets</h3>
+          <div id="possible-targets" class="block"></div>
+        </div>
+        <div>
+          <h3>Best Choices</h3>
+          <pre id="best-choices" class="block pre"></pre>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Built with Kotlin/JS.</span>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

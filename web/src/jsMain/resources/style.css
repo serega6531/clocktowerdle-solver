@@ -1,0 +1,349 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap");
+
+:root {
+  color-scheme: light;
+  --bg: #f7f3ea;
+  --bg-deep: #eadfcc;
+  --ink: #22211f;
+  --ink-soft: #534f49;
+  --accent: #d97706;
+  --accent-dark: #a04c11;
+  --card: #fefaf3;
+  --border: #e1d6c4;
+  --shadow: rgba(40, 28, 16, 0.12);
+  --acc-incorrect: #787c7f;
+  --acc-partial: #c8b653;
+  --acc-correct: #6ca965;
+  --mono: "IBM Plex Mono", "Courier New", monospace;
+  --sans: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: radial-gradient(circle at top, #fff6e4 0%, var(--bg) 55%, #f3e7d3 100%);
+  min-height: 100vh;
+}
+
+.bg-orb {
+  position: fixed;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.6;
+  z-index: 0;
+}
+
+.orb-a {
+  top: -160px;
+  right: -120px;
+  background: radial-gradient(circle, #f59e0b 0%, rgba(245, 158, 11, 0.1) 70%);
+}
+
+.orb-b {
+  bottom: -200px;
+  left: -120px;
+  background: radial-gradient(circle, #0f766e 0%, rgba(15, 118, 110, 0.1) 70%);
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: var(--accent-dark);
+  font-weight: 600;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 5vw, 3.5rem);
+  margin: 0;
+  font-weight: 700;
+}
+
+.sub {
+  margin: 0;
+  color: var(--ink-soft);
+  max-width: 600px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 20px 40px var(--shadow);
+}
+
+.panel.compact {
+  padding: 18px 24px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.section-subtitle {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent-dark);
+}
+
+.panel-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.grid.attributes {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.guess-line {
+  margin-bottom: 16px;
+}
+
+.settings {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.field input,
+.field select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+}
+
+.accuracy-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, 44px);
+  gap: 8px;
+}
+
+.accuracy-option {
+  position: relative;
+}
+
+.accuracy-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.accuracy-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.accuracy-box:hover {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.accuracy-option input:focus-visible + .accuracy-box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.accuracy-box[data-accuracy="INCORRECT"] {
+  background: var(--acc-incorrect);
+  border-color: transparent;
+}
+
+.accuracy-box[data-accuracy="PARTIALLY_CORRECT"] {
+  background: var(--acc-partial);
+  border-color: transparent;
+}
+
+.accuracy-box[data-accuracy="CORRECT"] {
+  background: var(--acc-correct);
+  border-color: transparent;
+}
+
+.accuracy-option input:checked + .accuracy-box::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.accuracy-option input:checked + .accuracy-box {
+  border-color: rgba(0, 0, 0, 0.28);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75) inset;
+}
+
+.field.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.field.checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 600;
+  font-family: var(--sans);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+button.primary {
+  background: var(--accent);
+  color: white;
+}
+
+button.secondary {
+  background: #0f766e;
+  color: white;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+.status {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--accent-dark);
+}
+
+.output {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.output h3 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.block {
+  background: #fffaf1;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+}
+
+.pre {
+  min-height: 120px;
+}
+
+.footer {
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  button {
+    width: 100%;
+  }
+}
