@@ -173,14 +173,12 @@ private fun renderReport(ui: Ui, report: SolverReport, guesses: MutableList<Gues
 }
 
 private fun renderPossibleTargets(ui: Ui, possibleTargets: Set<Character>) {
-    val targets = possibleTargets
-        .sortedBy { it.characterName }
-        .joinToString(", ") { it.characterName }
-
-    ui.possibleTargets.textContent = if (possibleTargets.isEmpty()) {
-        "No possible targets remain."
+    ui.possibleTargets.textContent = if (possibleTargets.isNotEmpty()) {
+        possibleTargets
+            .sortedBy { it.characterName }
+            .joinToString(", ") { it.characterName }
     } else {
-        targets
+        "No possible targets remain."
     }
 }
 
