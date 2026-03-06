@@ -81,6 +81,7 @@ fun main() {
         ui.status.textContent = ""
         ui.possibleTargets.textContent = ""
         ui.bestChoices.textContent = ""
+        resetSelections(ui)
         renderGuesses(ui, guesses)
     }
 
@@ -118,6 +119,23 @@ private fun buildGuess(ui: Ui): Guess? {
         learnsInfoAccuracy = accuracyFromGroup(GROUP_LEARNS_INFO),
         abilityMatches = abilityMatches
     )
+}
+
+private fun resetSelections(ui: Ui) {
+    ui.guessSelect.selectedIndex = 0
+    ui.abilityMatchesInput.value = "0"
+    setAccuracyGroupToIncorrect(GROUP_ORIGINAL_SCRIPT)
+    setAccuracyGroupToIncorrect(GROUP_CHARACTER_TYPE)
+    setAccuracyGroupToIncorrect(GROUP_WAKES_IN_NIGHT)
+    setAccuracyGroupToIncorrect(GROUP_SELECTS_PLAYER)
+    setAccuracyGroupToIncorrect(GROUP_LEARNS_INFO)
+    updateAbilityRange(ui)
+}
+
+private fun setAccuracyGroupToIncorrect(groupName: String) {
+    val input = document.querySelector("input[name='$groupName'][value='INCORRECT']") as? HTMLInputElement
+        ?: return
+    input.checked = true
 }
 
 private fun computeAndRender(ui: Ui, guesses: List<Guess>) {
