@@ -145,3 +145,23 @@ Enter the feedback (e.g. +, ~, -, +, -, 1) or CORRECT:
 > CORRECT
 Well done!
 ```
+
+## Frontend (Kotlin/JS)
+
+The frontend is a Kotlin/JS module that lives in the `web` Gradle module and builds a static site.
+
+### Build the Site
+
+```bash
+./gradlew :web:jsBrowserDistribution
+```
+
+The output is written to `web/build/dist/js/productionExecutable/`.
+
+### Local Preview
+
+Open `web/build/dist/js/productionExecutable/index.html` after running `:web:jsBrowserDistribution`.
+
+### GitHub Actions Deploy
+
+The repo includes a GitHub Actions workflow that builds the frontend and deploys it to [GitHub Pages](https://serega6531.github.io/clocktowerdle-solver/) on every push to `main`.

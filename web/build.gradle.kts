@@ -25,11 +25,3 @@ kotlin {
         }
     }
 }
-
-tasks.register<Copy>("copyFrontendToDocs") {
-    group = "distribution"
-    description = "Build the frontend and copy it into the root docs/ folder for GitHub Pages"
-    dependsOn("browserDistribution")
-    from(layout.buildDirectory.dir("dist"))
-    into(rootProject.layout.projectDirectory.dir("docs"))
-}
