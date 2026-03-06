@@ -1,6 +1,7 @@
 package ru.serega6531.clocktowerdle
 
 import kotlinx.browser.document
+import kotlinx.browser.window
 import kotlin.math.roundToInt
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -25,7 +26,8 @@ private data class Ui(
     val status: HTMLElement,
     val guessesList: HTMLUListElement,
     val possibleTargets: HTMLElement,
-    val bestChoices: HTMLElement
+    val bestChoices: HTMLElement,
+    val sessionOutput: HTMLElement
 )
 
 private val uiScope = MainScope()
@@ -49,7 +51,8 @@ fun main() {
         status = requireElement("status"),
         guessesList = requireElement("guesses"),
         possibleTargets = requireElement("possible-targets"),
-        bestChoices = requireElement("best-choices")
+        bestChoices = requireElement("best-choices"),
+        sessionOutput = requireElement("session-output")
     )
 
     val guesses = mutableListOf<Guess>()
@@ -66,14 +69,14 @@ fun main() {
         ui.status.textContent = ""
         val guess = buildGuess(ui) ?: return@onClick
         guesses.add(guess)
+        scrollToSessionOutput(ui)
         computeAndRender(ui, guesses)
     }
 
     ui.markCorrectButton.onClick {
         ui.status.textContent = ""
         val character = selectedCharacter(ui) ?: return@onClick
-        guesses.add(Guess.correct(character))
-        renderSolved(ui, character, guesses)
+        addCorrectGuess(ui, guesses, character)
     }
 
     ui.resetButton.onClick {
@@ -138,7 +141,7 @@ private fun setAccuracyGroupToIncorrect(groupName: String) {
     input.checked = true
 }
 
-private fun computeAndRender(ui: Ui, guesses: List<Guess>) {
+private fun computeAndRender(ui: Ui, guesses: MutableList<Guess>) {
     ui.status.textContent = "Calculating next step..."
     val solver = buildSolver(ui)
     uiScope.launch {
@@ -158,26 +161,89 @@ private fun renderSolved(ui: Ui, character: Character, guesses: List<Guess>) {
     ui.bestChoices.textContent = ""
 }
 
-private fun renderReport(ui: Ui, report: SolverReport, guesses: List<Guess>) {
-    renderGuesses(ui, guesses)
+private fun addCorrectGuess(ui: Ui, guesses: MutableList<Guess>, character: Character) {
+    guesses.add(Guess.correct(character))
+    renderSolved(ui, character, guesses)
+}
 
-    val targets = report.possibleTargets
+private fun renderReport(ui: Ui, report: SolverReport, guesses: MutableList<Guess>) {
+    renderGuesses(ui, guesses)
+    renderPossibleTargets(ui, report.possibleTargets)
+    renderBestChoices(ui, report, guesses)
+}
+
+private fun renderPossibleTargets(ui: Ui, possibleTargets: Set<Character>) {
+    val targets = possibleTargets
         .sortedBy { it.characterName }
         .joinToString(", ") { it.characterName }
 
-    ui.possibleTargets.textContent = if (report.possibleTargets.isEmpty()) {
+    ui.possibleTargets.textContent = if (possibleTargets.isEmpty()) {
         "No possible targets remain."
     } else {
         targets
     }
+}
 
-    val best = report.bestChoices
-        .mapIndexed { index, choice ->
-            "${index + 1}) ${choice.character.characterName} (${formatScore(choice.expectedCost)})"
+private fun renderBestChoices(ui: Ui, report: SolverReport, guesses: MutableList<Guess>) {
+    ui.bestChoices.innerHTML = ""
+    if (report.bestChoices.isEmpty()) {
+        ui.bestChoices.textContent = "No valid guesses remain."
+        return
+    }
+
+    report.bestChoices.forEachIndexed { index, choice ->
+        val row = buildChoiceRow(ui, report, guesses, index, choice)
+        ui.bestChoices.appendChild(row)
+    }
+}
+
+private fun buildChoiceRow(
+    ui: Ui,
+    report: SolverReport,
+    guesses: MutableList<Guess>,
+    index: Int,
+    choice: SolverChoice
+): HTMLElement {
+    val row = document.createElement("div") as HTMLElement
+    row.className = "choice-row"
+
+    row.appendChild(buildChoiceLabel(index, choice))
+    row.appendChild(buildChoiceAction(ui, report, guesses, choice))
+
+    return row
+}
+
+private fun buildChoiceLabel(index: Int, choice: SolverChoice): HTMLElement {
+    val label = document.createElement("span") as HTMLElement
+    label.className = "choice-label"
+    label.textContent = "${index + 1}) ${choice.character.characterName} (${formatScore(choice.expectedCost)})"
+    return label
+}
+
+private fun buildChoiceAction(
+    ui: Ui,
+    report: SolverReport,
+    guesses: MutableList<Guess>,
+    choice: SolverChoice
+): HTMLButtonElement {
+    val action = document.createElement("button") as HTMLButtonElement
+    action.className = "ghost choice-action"
+    action.type = "button"
+    action.textContent = "Use"
+    action.setAttribute("aria-label", "Use ${choice.character.characterName} as guess")
+    action.onClick {
+        resetSelections(ui)
+        ui.guessSelect.value = choice.character.name
+        updateAbilityRange(ui)
+
+        if (report.possibleTargets.size == 1) {
+            addCorrectGuess(ui, guesses, choice.character)
+            return@onClick
         }
-        .joinToString("\n")
 
-    ui.bestChoices.textContent = best.ifBlank { "No valid guesses remain." }
+        window.scrollTo(0.0, 0.0)
+    }
+    return action
 }
 
 private fun renderGuesses(ui: Ui, guesses: List<Guess>) {
@@ -245,6 +311,10 @@ private fun buildSolver(ui: Ui): Solver {
             includeInefficientBranches = includeInefficient
         )
     )
+}
+
+private fun scrollToSessionOutput(ui: Ui) {
+    ui.sessionOutput.scrollIntoView()
 }
 
 private fun EventTarget.onClick(callback: (Event) -> Unit) {
