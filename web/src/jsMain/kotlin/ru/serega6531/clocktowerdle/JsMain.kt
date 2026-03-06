@@ -150,7 +150,7 @@ private fun renderReport(ui: Ui, report: SolverReport, guesses: List<Guess>) {
     ui.possibleTargets.textContent = if (report.possibleTargets.isEmpty()) {
         "No possible targets remain."
     } else {
-        "Possible targets (${report.possibleTargets.size}): $targets"
+        targets
     }
 
     val best = report.bestChoices
@@ -196,9 +196,9 @@ private fun accuracyFromGroup(groupName: String): Accuracy {
 
 private fun Accuracy.shortLabel(): String {
     return when (this) {
-        Accuracy.CORRECT -> "+"
-        Accuracy.PARTIALLY_CORRECT -> "~"
-        Accuracy.INCORRECT -> "-"
+        Accuracy.CORRECT -> "\uD83D\uDFE9" // green square
+        Accuracy.PARTIALLY_CORRECT -> "\uD83D\uDFE8" // yellow square
+        Accuracy.INCORRECT -> "⬛" // black square
     }
 }
 

@@ -48,7 +48,7 @@
         </label>
         <label class="field">
           <span>Character Type</span>
-          <div class="accuracy-group" role="radiogroup" aria-label="Character Type">
+          <div class="accuracy-group triple" role="radiogroup" aria-label="Character Type">
             <label class="accuracy-option">
               <input type="radio" name="character-type" value="INCORRECT" checked />
               <span class="accuracy-box" data-accuracy="INCORRECT" aria-hidden="true"></span>
@@ -114,26 +114,6 @@
       </div>
     </section>
 
-    <details class="panel compact settings-panel">
-      <summary class="panel-header summary">
-        <h2>Solver Settings</h2>
-      </summary>
-      <div class="grid settings">
-        <label class="field">
-          <span>Max Guesses</span>
-          <input id="max-guesses" type="number" min="1" value="4" />
-        </label>
-        <label class="field">
-          <span>Top Choices</span>
-          <input id="top-choices" type="number" min="1" value="5" />
-        </label>
-        <label class="field checkbox">
-          <input id="include-inefficient" type="checkbox" />
-          <span>Include Inefficient Branches</span>
-        </label>
-      </div>
-    </details>
-
     <section class="panel">
       <div class="panel-header">
         <h2>Session Output</h2>
@@ -145,15 +125,35 @@
           <ul id="guesses" class="list"></ul>
         </div>
         <div>
-          <h3>Possible Targets</h3>
-          <div id="possible-targets" class="block"></div>
-        </div>
-        <div>
           <h3>Best Choices</h3>
           <pre id="best-choices" class="block pre"></pre>
         </div>
+        <div>
+          <h3>Possible Targets</h3>
+          <div id="possible-targets" class="block"></div>
+        </div>
       </div>
     </section>
+
+    <details class="panel compact settings-panel">
+      <summary class="panel-header summary">
+        <h2>Solver Settings</h2>
+      </summary>
+      <div class="grid settings">
+        <label class="field">
+          <span>Max Guesses (Depth)</span>
+          <input id="max-guesses" type="number" min="1" value="4" />
+        </label>
+        <label class="field">
+          <span>Display Top Choices</span>
+          <input id="top-choices" type="number" min="1" value="5" />
+        </label>
+        <label class="field checkbox">
+          <input id="include-inefficient" type="checkbox" />
+          <span>Include Inefficient Branches</span>
+        </label>
+      </div>
+    </details>
 
     <footer class="footer">
       <span>Built with Kotlin/JS.</span>

@@ -209,9 +209,15 @@ h1 {
 }
 
 .accuracy-group {
+  --accuracy-size: 44px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, 44px);
+  grid-template-columns: repeat(auto-fit, var(--accuracy-size));
   gap: 8px;
+}
+
+.accuracy-group.triple {
+  --accuracy-size: 40px;
+  grid-template-columns: repeat(3, var(--accuracy-size));
 }
 
 .accuracy-option {
@@ -228,8 +234,8 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: var(--accuracy-size);
+  height: var(--accuracy-size);
   border-radius: 10px;
   border: 1px solid var(--border);
   background: #fff;
@@ -378,8 +384,14 @@ button.ghost {
 
 @media (max-width: 720px) {
   .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  .panel-actions {
+    margin-left: auto;
   }
 
   .actions {
@@ -388,5 +400,9 @@ button.ghost {
 
   button {
     width: 100%;
+  }
+
+  .panel-actions button {
+    width: auto;
   }
 }
