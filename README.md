@@ -162,6 +162,24 @@ The output is written to `web/build/dist/js/productionExecutable/`.
 
 Open `web/build/dist/js/productionExecutable/index.html` after running `:web:jsBrowserDistribution`.
 
+## Chrome Extension (Kotlin/JS)
+
+The Chrome extension lives in the `extension` Gradle module and builds a Manifest V3 bundle.
+
+### Build the Extension
+
+```bash
+./gradlew :extension:jsBrowserDistribution
+```
+
+The output is written to `extension/build/dist/js/productionExecutable/`.
+
+### Load in Chrome
+
+1. Open `chrome://extensions`.
+2. Enable Developer mode.
+3. Click **Load unpacked** and select `extension/build/dist/js/productionExecutable/`.
+
 ### GitHub Actions Deploy
 
 The repo includes a GitHub Actions workflow that builds the frontend and deploys it to [GitHub Pages](https://serega6531.github.io/clocktowerdle-solver/) on every push to `main`.

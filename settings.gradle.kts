@@ -11,5 +11,6 @@ plugins {
 
 rootProject.name = "clockwerdle-solver"
 include(":web")
+include(":extension")
 include(":shared")
 include(":jvm")

@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Clockwerdle Solver",
+  "version": "0.1.0",
+  "description": "Clockwerdle solver Chrome extension.",
+  "action": {
+    "default_title": "Clockwerdle Solver"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://clocktowerdle.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
